@@ -1,0 +1,8 @@
+{
+  "name": "Al Ittehad Forum - Members Portal",
+  "description": "A comprehensive community forum application for managing member savings, business investments, and notices with dark mode support.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
