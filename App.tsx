@@ -44,7 +44,10 @@ import {
   Users,
   Calendar,
   ArrowRight,
-  ChevronRight
+  ChevronRight,
+  Facebook,
+  Instagram,
+  Youtube
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -999,7 +1002,32 @@ const App: React.FC = () => {
         <div className="relative z-10 flex flex-col md:flex-row items-center gap-16">
           <div className="flex-1">
             <h2 className="text-5xl font-black mb-6 uppercase tracking-tight">আল ইত্তেহাদ ফোরাম</h2>
-            <p className="text-xl opacity-90 mb-10 max-w-xl">ঐক্যবদ্ধ সঞ্চয় ও লাভজনক বিনিয়োগের মাধ্যমে সদস্যদের অর্থনৈতিক স্বয়ংসম্পূর্ণতা এবং ভ্রাতৃত্বের বন্ধন সুদৃঢ় করাই আমাদের মূল লক্ষ্য।</p>
+            <p className="text-lg opacity-90 mb-8 leading-relaxed">
+              আল ইত্তেহাদ ফোরাম একটি সম্পূর্ণ অরাজনৈতিক ও অসাম্প্রদায়িক সামাজিক এবং ব্যবসায়িক প্রতিষ্ঠান। এই সংগঠন তরুণ সমাজকে সঙ্গে নিয়ে দলবদ্ধভাবে কাজ করার মাধ্যমে—
+            </p>
+            <ul className="space-y-2 mb-8 opacity-90">
+              <li className="flex items-start gap-2">• দেশের অর্থনৈতিক অগ্রগতি সাধন</li>
+              <li className="flex items-start gap-2">• সামাজিক উন্নয়ন নিশ্চিতকরণ</li>
+              <li className="flex items-start gap-2">• মানবিক কল্যাণ ও বিকাশ ঘটানো</li>
+              <li className="flex items-start gap-2">• এবং সর্বোপরি ইসলামী মূল্যবোধের ভিত্তিতে আগামীর সোনার বাংলাদেশ গড়ে তোলা</li>
+            </ul>
+            <p className="text-lg opacity-90 mb-10 leading-relaxed">
+              —এই মহৎ লক্ষ্য অর্জনে অবিচল প্রতিজ্ঞাবদ্ধ। <br/>
+              ✨ ২৮ জুন ২০২৪ ইং তারিখে, একদল নব উদ্যমী ও দূরদর্শী তরুণদের উদ্যোগে এ প্রতিষ্ঠানটি প্রতিষ্ঠিত হয়। শুরু থেকেই আল ইত্তেহাদ ফোরাম দৃঢ়ভাবে বিশ্বাস করে যে, তরুণ সমাজের শক্তি ও ঐক্যই ভবিষ্যৎ বাংলাদেশের উন্নয়ন ও সমৃদ্ধির প্রধান চালিকাশক্তি।
+            </p>
+            
+            <div className="flex gap-4 mb-10">
+              <a href="https://www.facebook.com/alittehadforum2024/" target="_blank" rel="noopener noreferrer" className="bg-white/20 p-3 rounded-full hover:bg-white/30 transition-colors">
+                <Facebook size={24} />
+              </a>
+              <a href="https://www.instagram.com/al_ittehad_forum/" target="_blank" rel="noopener noreferrer" className="bg-white/20 p-3 rounded-full hover:bg-white/30 transition-colors">
+                <Instagram size={24} />
+              </a>
+              <a href="https://www.youtube.com/@AlIttehadForum" target="_blank" rel="noopener noreferrer" className="bg-white/20 p-3 rounded-full hover:bg-white/30 transition-colors">
+                <Youtube size={24} />
+              </a>
+            </div>
+
             <div className="grid grid-cols-2 gap-8">
               <div className="bg-white/10 p-8 rounded-[40px] text-center border border-white/10">
                 <div className="text-5xl font-black mb-1">{allMembers.length}</div>
@@ -1012,9 +1040,39 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="flex-1">
-            <img src="https://picsum.photos/seed/ittihad/800/600" className="w-full rounded-[56px] shadow-2xl border-8 border-white/10" />
+            <img src="https://picsum.photos/seed/alittehad/800/800" className="w-full rounded-[56px] shadow-2xl border-8 border-white/10" />
           </div>
         </div>
+      </section>
+
+      <section className={cardClass}>
+        <h2 className={`text-3xl font-black mb-8 ${textPrimary}`}>আমাদের লক্ষ্য ও উদ্দেশ্য</h2>
+        <p className={`${textSecondary} text-lg mb-8 leading-relaxed`}>
+          অর্থনৈতিক স্বচ্ছলতা অবলম্বনের মাধ্যমে উন্নয়নশীল জাতি গঠন, মানবিক কল্যান সাধন ও বৈষম্য দূরীকরন। <br/>
+          - আল ইত্তেহাদ ফোরামের মূল লক্ষ্য হলো—
+        </p>
+        <ul className="space-y-4 mb-12">
+          {[
+            'ভ্রাতৃত্বের বন্ধনকে সুদৃঢ় করা এবং পারস্পরিক সহযোগিতার মাধ্যমে বিশ্বস্ত ও সুষ্ঠু বিনিয়োগ কার্যক্রম পরিচালনা।',
+            'ইসলামী শরীয়াহভিত্তিক নীতিমালা অনুসরণ করে অর্থনৈতিক সমৃদ্ধি অর্জন ও আত্মসামাজিক কার্যক্রম গ্রহণ।',
+            'সংস্থার সদস্য ও দরিদ্র জনগোষ্ঠীর ভৌত ও নৈতিক মানোন্নয়ন সাধন।',
+            'সমাজ উন্নয়ন ও মানবসেবামূলক কাজে সক্রিয় অংশগ্রহণ।'
+          ].map((item, i) => (
+            <li key={i} className="flex items-start gap-4">
+              <div className="mt-1.5 w-2 h-2 rounded-full bg-emerald-600 flex-shrink-0"></div>
+              <p className={textSecondary}>{item}</p>
+            </li>
+          ))}
+        </ul>
+
+        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-8 rounded-[32px] border border-emerald-100 dark:border-emerald-800/50">
+          <h3 className="text-xl font-black text-emerald-600 mb-2">আমাদের স্লোগন</h3>
+          <p className={`text-2xl font-black italic ${textPrimary}`}>"একতায় বল, হালাল উপার্জনে এগিয়ে চল।"</p>
+        </div>
+
+        <p className={`${textSecondary} mt-10 italic`}>
+          ইনশাআল্লাহ আল ইত্তেহাদ ফোরাম তার স্লোগান, লক্ষ্য ও উদ্দেশ্যকে সামনে রেখে নতুন নতুন কার্যক্রম পরিচালনার মধ্য দিয়ে এগিয়ে যাবে দুর্বার গতিতে।
+        </p>
       </section>
 
       <section>
