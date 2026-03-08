@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Member, AppView, Transaction, Notice, BusinessUpdate } from './types';
+import { Member, AppView, Transaction, Notice, BusinessUpdate, ContactMessage } from './types';
 import { members as initialMembers, transactions as initialTransactions, notices as initialNotices, businesses as initialBusinesses } from './mockData';
 import { getForumSupport } from './geminiService';
 import { db as firestore } from './firebase';
@@ -47,7 +47,11 @@ import {
   ChevronRight,
   Facebook,
   Instagram,
-  Youtube
+  Youtube,
+  Mail,
+  Phone,
+  MapPin,
+  MessageCircle
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -56,6 +60,7 @@ const App: React.FC = () => {
   const [allNotices, setAllNotices] = useState<Notice[]>([]);
   const [allBusinesses, setAllBusinesses] = useState<BusinessUpdate[]>([]);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
   const [view, setView] = useState<AppView>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
@@ -133,11 +138,19 @@ const App: React.FC = () => {
       console.error("Transactions listener error:", error);
     });
 
+    const unsubContact = onSnapshot(query(collection(firestore, 'contact_messages'), orderBy('date', 'desc')), (snapshot) => {
+      const contactData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ContactMessage));
+      setContactMessages(contactData);
+    }, (error) => {
+      console.error("Contact messages listener error:", error);
+    });
+
     return () => {
       unsubMembers();
       unsubNotices();
       unsubBusinesses();
       unsubTransactions();
+      unsubContact();
     };
   }, []);
 
@@ -556,6 +569,14 @@ const App: React.FC = () => {
           <button onClick={() => { setView('about'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all ${view === 'about' ? 'bg-emerald-600 text-white shadow-lg' : `${textSecondary} hover:bg-emerald-50 dark:hover:bg-emerald-900/10`}`}>
             <Info size={20} /> <span className="font-bold">আমাদের সম্পর্কে</span>
           </button>
+          <button onClick={() => { setView('contact'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all ${view === 'contact' ? 'bg-emerald-600 text-white shadow-lg' : `${textSecondary} hover:bg-emerald-50 dark:hover:bg-emerald-900/10`}`}>
+            <Mail size={20} /> <span className="font-bold">যোগাযোগ</span>
+          </button>
+          {currentUser?.role === 'admin' && (
+            <button onClick={() => { setView('admin-contact'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all ${view === 'admin-contact' ? 'bg-emerald-600 text-white shadow-lg' : `${textSecondary} hover:bg-emerald-50 dark:hover:bg-emerald-900/10`}`}>
+              <MessageCircle size={20} /> <span className="font-bold">মেসেজ বক্স</span>
+            </button>
+          )}
         </nav>
         <div className="p-6 space-y-3">
           <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-full flex items-center justify-between px-5 py-3 rounded-2xl border border-gray-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
@@ -996,6 +1017,184 @@ const App: React.FC = () => {
     </div>
   );
 
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const msgId = `msg-${Date.now()}`;
+    const newMsg: ContactMessage = {
+      id: msgId,
+      memberId: currentUser?.id || 'guest',
+      memberName: currentUser?.name || 'অজ্ঞাত',
+      subject: formData.get('subject') as string,
+      message: formData.get('message') as string,
+      date: new Date().toLocaleString('bn-BD'),
+      status: 'new'
+    };
+
+    try {
+      await setDoc(doc(firestore, 'contact_messages', msgId), newMsg);
+      alert('আপনার মেসেজটি সফলভাবে পাঠানো হয়েছে। এডমিন শীঘ্রই আপনার সাথে যোগাযোগ করবেন।');
+      (e.target as HTMLFormElement).reset();
+    } catch (error) {
+      alert('মেসেজ পাঠাতে সমস্যা হয়েছে।');
+    }
+  };
+
+  const markMessageAsRead = async (msgId: string) => {
+    try {
+      await updateDoc(doc(firestore, 'contact_messages', msgId), { status: 'read' });
+    } catch (error) {
+      console.error("Error marking message as read:", error);
+    }
+  };
+
+  const deleteMessage = async (msgId: string) => {
+    if (!window.confirm('আপনি কি নিশ্চিতভাবে এই মেসেজটি ডিলিট করতে চান?')) return;
+    try {
+      await deleteDoc(doc(firestore, 'contact_messages', msgId));
+    } catch (error) {
+      alert('ডিলিট করতে সমস্যা হয়েছে।');
+    }
+  };
+
+  const renderContact = () => (
+    <div className="space-y-12 animate-in fade-in duration-700">
+      <div className="grid lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <div className={cardClass}>
+            <h2 className={`text-3xl font-black mb-8 ${textPrimary}`}>যোগাযোগ করুন</h2>
+            <form onSubmit={handleContactSubmit} className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className={`text-xs font-black uppercase tracking-widest ${textSecondary}`}>আপনার নাম</label>
+                  <input type="text" value={currentUser?.name} readOnly className={`w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 outline-none ${textPrimary} opacity-70`} />
+                </div>
+                <div className="space-y-2">
+                  <label className={`text-xs font-black uppercase tracking-widest ${textSecondary}`}>সদস্য আইডি</label>
+                  <input type="text" value={currentUser?.id} readOnly className={`w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 outline-none ${textPrimary} opacity-70`} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className={`text-xs font-black uppercase tracking-widest ${textSecondary}`}>বিষয়</label>
+                <input name="subject" required type="text" placeholder="মেসেজের বিষয় লিখুন" className={`w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 outline-none focus:border-emerald-500 transition-colors ${textPrimary}`} />
+              </div>
+              <div className="space-y-2">
+                <label className={`text-xs font-black uppercase tracking-widest ${textSecondary}`}>মেসেজ</label>
+                <textarea name="message" required rows={5} placeholder="আপনার মেসেজটি এখানে লিখুন..." className={`w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 outline-none focus:border-emerald-500 transition-colors ${textPrimary}`}></textarea>
+              </div>
+              <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-3xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-3 active:scale-95 transition-all">
+                মেসেজ পাঠান <Send size={20} />
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div className="space-y-8">
+          <div className={cardClass}>
+            <h3 className={`text-xl font-black mb-8 ${textPrimary}`}>যোগাযোগের তথ্য</h3>
+            <div className="space-y-8">
+              <div className="flex items-start gap-5">
+                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-600 shrink-0">
+                  <Phone size={22} />
+                </div>
+                <div>
+                  <div className={`text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-1`}>মোবাইল</div>
+                  <div className={`font-black ${textPrimary}`}>01616790750</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-5">
+                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-600 shrink-0">
+                  <Mail size={22} />
+                </div>
+                <div>
+                  <div className={`text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-1`}>ইমেইল</div>
+                  <div className={`font-black ${textPrimary}`}>alittehadforum@gmail.com</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-5">
+                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-600 shrink-0">
+                  <MapPin size={22} />
+                </div>
+                <div>
+                  <div className={`text-[10px] font-black uppercase tracking-widest ${textSecondary} mb-1`}>ঠিকানা</div>
+                  <div className={`font-black leading-relaxed ${textPrimary}`}>গ্রীণ মডেল টাউন, মান্ডা, মুগদা, ঢাকা।</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className={`${cardClass} bg-emerald-600 text-white border-none`}>
+            <h3 className="text-xl font-black mb-4">অফিস সময়</h3>
+            <p className="opacity-90 text-sm leading-relaxed mb-6">আমাদের অফিস শুক্রবার ও শনিবার সকাল ১০টা থেকে রাত ৮টা পর্যন্ত খোলা থাকে। অন্যান্য দিনগুলোতে অ্যাপের মাধ্যমে যোগাযোগ করুন।</p>
+            <div className="pt-6 border-t border-white/10 flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
+              <span className="text-[10px] font-black uppercase tracking-widest">আমরা আপনার পাশে আছি</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAdminContact = () => (
+    <div className="space-y-8 animate-in fade-in duration-700">
+      <div className={cardClass}>
+        <div className="flex justify-between items-center mb-10">
+          <h2 className={`text-3xl font-black ${textPrimary}`}>মেসেজ বক্স</h2>
+          <div className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest">
+            মোট মেসেজ: {contactMessages.length}
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          {contactMessages.map(msg => (
+            <div key={msg.id} className={`p-8 rounded-[40px] border transition-all ${msg.status === 'new' ? 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700'}`}>
+              <div className="flex flex-col md:flex-row justify-between gap-6">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${msg.status === 'new' ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
+                      {msg.status === 'new' ? 'নতুন' : 'পঠিত'}
+                    </span>
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${textSecondary}`}>{msg.date}</span>
+                  </div>
+                  <h3 className={`text-xl font-black mb-2 ${textPrimary}`}>{msg.subject}</h3>
+                  <p className={`text-sm ${textSecondary} mb-6 leading-relaxed`}>{msg.message}</p>
+                  <div className="flex items-center gap-3 pt-6 border-t border-slate-200 dark:border-slate-700">
+                    <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs font-black">
+                      {msg.memberName[0]}
+                    </div>
+                    <div>
+                      <div className={`text-xs font-black ${textPrimary}`}>{msg.memberName}</div>
+                      <div className={`text-[10px] font-bold ${textSecondary}`}>ID: {msg.memberId}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex md:flex-col gap-3 shrink-0">
+                  {msg.status === 'new' && (
+                    <button onClick={() => markMessageAsRead(msg.id)} className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-2xl transition-all" title="পঠিত হিসেবে চিহ্নিত করুন">
+                      <CheckCircle size={20} />
+                    </button>
+                  )}
+                  <button onClick={() => deleteMessage(msg.id)} className="flex-1 md:flex-none bg-rose-100 dark:bg-rose-900/30 text-rose-600 p-4 rounded-2xl hover:bg-rose-600 hover:text-white transition-all" title="ডিলিট">
+                    <Trash2 size={20} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {contactMessages.length === 0 && (
+            <div className="py-20 text-center">
+              <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-[32px] flex items-center justify-center mx-auto mb-6 text-slate-400">
+                <Mail size={32} />
+              </div>
+              <p className="text-slate-400 font-bold uppercase tracking-widest">কোনো মেসেজ নেই</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   const renderAbout = () => (
     <div className="space-y-12 animate-in fade-in duration-700">
       <section className={`${cardClass} bg-gradient-to-br from-emerald-600 to-green-700 text-white border-none p-12 overflow-hidden relative shadow-lg`}>
@@ -1136,9 +1335,11 @@ const App: React.FC = () => {
       case 'dashboard': return currentUser?.role === 'admin' ? renderAdminDashboard() : renderMemberDashboard();
       case 'notices': return renderNotices();
       case 'about': return renderAbout();
+      case 'contact': return renderContact();
       case 'admin-members': return renderAdminMembers();
       case 'admin-businesses': return renderAdminBusinesses();
       case 'admin-notices': return renderAdminNotices();
+      case 'admin-contact': return renderAdminContact();
       default: return currentUser?.role === 'admin' ? renderAdminDashboard() : renderMemberDashboard();
     }
   };
@@ -1165,7 +1366,11 @@ const App: React.FC = () => {
             <button className="lg:hidden p-2 md:p-3 bg-emerald-50 text-emerald-600 rounded-xl md:rounded-2xl active:scale-95 transition-all" onClick={() => setSidebarOpen(true)}><Menu size={20} /></button>
             <div>
               <h1 className="text-lg md:text-2xl font-black uppercase tracking-tight">
-                {view === 'dashboard' ? 'ড্যাশবোর্ড' : view === 'notices' ? 'নোটিশ বোর্ড' : view.includes('admin') ? 'এডমিন কন্ট্রোল' : 'আল ইত্তেহাদ'}
+                {view === 'dashboard' ? 'ড্যাশবোর্ড' : 
+                 view === 'notices' ? 'নোটিশ বোর্ড' : 
+                 view === 'contact' ? 'যোগাযোগ' :
+                 view === 'admin-contact' ? 'মেসেজ বক্স' :
+                 view.includes('admin') ? 'এডমিন কন্ট্রোল' : 'আল ইত্তেহাদ'}
               </h1>
             </div>
           </div>

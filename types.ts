@@ -40,4 +40,14 @@ export interface BusinessUpdate {
   imageUrl: string;
 }
 
-export type AppView = 'welcome' | 'dashboard' | 'notices' | 'about' | 'history' | 'admin-members' | 'admin-notices' | 'admin-businesses';
+export interface ContactMessage {
+  id: string;
+  memberId: string;
+  memberName: string;
+  subject: string;
+  message: string;
+  date: string;
+  status: 'new' | 'read' | 'replied';
+}
+
+export type AppView = 'welcome' | 'dashboard' | 'notices' | 'about' | 'history' | 'contact' | 'admin-members' | 'admin-notices' | 'admin-businesses' | 'admin-contact';
