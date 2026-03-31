@@ -223,13 +223,26 @@ const App: React.FC = () => {
     setLoginPass('');
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && currentUser) {
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const base64String = reader.result as string;
+        
+        // Update locally for immediate feedback
         setAllMembers(prev => prev.map(m => m.id === currentUser.id ? { ...m, avatar: base64String } : m));
+        setCurrentUser(prev => prev ? { ...prev, avatar: base64String } : null);
+
+        // Only try to save to Firestore if it's not the hardcoded admin
+        if (currentUser.id !== 'AM2003') {
+          try {
+            const memberRef = doc(firestore, 'members', currentUser.id);
+            await updateDoc(memberRef, { avatar: base64String });
+          } catch (error) {
+            console.error("Error updating avatar in Firestore:", error);
+          }
+        }
       };
       reader.readAsDataURL(file);
     }
