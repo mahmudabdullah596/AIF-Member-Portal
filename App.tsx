@@ -1079,6 +1079,36 @@ const App: React.FC = () => {
 
   const AdBanner = () => {
     const activeAd = allAds.find(ad => ad.active);
+    const adRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      if (activeAd?.type === 'code' && adRef.current) {
+        // Clear previous content
+        adRef.current.innerHTML = '';
+        
+        // Create a temporary container to parse the HTML
+        const div = document.createElement('div');
+        div.innerHTML = activeAd.content;
+        
+        // Find all scripts
+        const scripts = div.querySelectorAll('script');
+        
+        // Append non-script content first
+        const nonScripts = Array.from(div.childNodes).filter(node => node.nodeName !== 'SCRIPT');
+        nonScripts.forEach(node => adRef.current?.appendChild(node.cloneNode(true)));
+
+        // Execute scripts
+        scripts.forEach(oldScript => {
+          const newScript = document.createElement('script');
+          Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+          if (oldScript.innerHTML) {
+            newScript.innerHTML = oldScript.innerHTML;
+          }
+          adRef.current?.appendChild(newScript);
+        });
+      }
+    }, [activeAd]);
+
     if (!activeAd) return null;
 
     return (
@@ -1093,7 +1123,7 @@ const App: React.FC = () => {
             <video src={activeAd.content} autoPlay loop muted playsInline className="w-full h-full object-cover" />
           )}
           {activeAd.type === 'code' && (
-            <div className="w-full h-full overflow-hidden" dangerouslySetInnerHTML={{ __html: activeAd.content }} />
+            <div ref={adRef} className="w-full h-full overflow-hidden flex items-center justify-center" />
           )}
         </div>
       </div>
