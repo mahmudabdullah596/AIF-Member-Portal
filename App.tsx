@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Member, AppView, Transaction, Notice, BusinessUpdate, ContactMessage } from './types';
+import { Member, AppView, Transaction, Notice, BusinessUpdate, ContactMessage, Ad } from './types';
 import { members as initialMembers, transactions as initialTransactions, notices as initialNotices, businesses as initialBusinesses } from './mockData';
 import { getForumSupport } from './geminiService';
 import { db as firestore } from './firebase';
@@ -51,7 +51,8 @@ import {
   Mail,
   Phone,
   MapPin,
-  MessageCircle
+  MessageCircle,
+  Monitor
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -60,6 +61,7 @@ const App: React.FC = () => {
   const [allNotices, setAllNotices] = useState<Notice[]>([]);
   const [allBusinesses, setAllBusinesses] = useState<BusinessUpdate[]>([]);
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [allAds, setAllAds] = useState<Ad[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
   const [view, setView] = useState<AppView>('dashboard');
@@ -88,9 +90,11 @@ const App: React.FC = () => {
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [editingBusiness, setEditingBusiness] = useState<BusinessUpdate | null>(null);
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
+  const [editingAd, setEditingAd] = useState<Ad | null>(null);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showAddNoticeModal, setShowAddNoticeModal] = useState(false);
   const [showAddBusinessModal, setShowAddBusinessModal] = useState(false);
+  const [showAddAdModal, setShowAddAdModal] = useState(false);
   const [showAddPaymentModal, setShowAddPaymentModal] = useState<{ member: Member } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const businessImageRef = useRef<HTMLInputElement>(null);
@@ -145,12 +149,20 @@ const App: React.FC = () => {
       console.error("Contact messages listener error:", error);
     });
 
+    const unsubAds = onSnapshot(query(collection(firestore, 'ads'), orderBy('createdAt', 'desc')), (snapshot) => {
+      const adsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Ad));
+      setAllAds(adsData);
+    }, (error) => {
+      console.error("Ads listener error:", error);
+    });
+
     return () => {
       unsubMembers();
       unsubNotices();
       unsubBusinesses();
       unsubTransactions();
       unsubContact();
+      unsubAds();
     };
   }, []);
 
@@ -431,6 +443,51 @@ const App: React.FC = () => {
     }
   };
 
+  const deleteAd = async (id: string) => {
+    if (window.confirm('আপনি কি এই বিজ্ঞাপনটি ডিলিট করতে চান?')) {
+      try {
+        await deleteDoc(doc(firestore, 'ads', id));
+      } catch (error) {
+        alert('ডিলিট করতে সমস্যা হয়েছে।');
+      }
+    }
+  };
+
+  const handleAddAd = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const adId = `ad-${Date.now()}`;
+    const newAd: Ad = {
+      id: adId,
+      type: formData.get('type') as any,
+      content: formData.get('content') as string,
+      link: formData.get('link') as string,
+      active: true,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      await setDoc(doc(firestore, 'ads', adId), newAd);
+      setShowAddAdModal(false);
+    } catch (error) {
+      alert('বিজ্ঞাপন যোগ করতে সমস্যা হয়েছে।');
+    }
+  };
+
+  const saveAdEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingAd) {
+      try {
+        const adRef = doc(firestore, 'ads', editingAd.id);
+        const { id, ...updateData } = editingAd;
+        await updateDoc(adRef, updateData);
+        setEditingAd(null);
+      } catch (error) {
+        alert('আপডেট করতে সমস্যা হয়েছে।');
+      }
+    }
+  };
+
   const handleConnectGoogle = async () => {
     try {
       const response = await fetch('/api/auth/google/url');
@@ -563,6 +620,9 @@ const App: React.FC = () => {
               </button>
               <button onClick={() => { setView('admin-notices'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all ${view === 'admin-notices' ? 'bg-emerald-600 text-white shadow-lg' : `${textSecondary} hover:bg-emerald-50 dark:hover:bg-emerald-900/10`}`}>
                 <Bell size={20} /> <span className="font-bold">নোটিশ নিয়ন্ত্রণ</span>
+              </button>
+              <button onClick={() => { setView('admin-ads'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all ${view === 'admin-ads' ? 'bg-emerald-600 text-white shadow-lg' : `${textSecondary} hover:bg-emerald-50 dark:hover:bg-emerald-900/10`}`}>
+                <Monitor size={20} /> <span className="font-bold">বিজ্ঞাপন নিয়ন্ত্রণ</span>
               </button>
             </>
           )}
@@ -1017,6 +1077,124 @@ const App: React.FC = () => {
     </div>
   );
 
+  const AdBanner = () => {
+    const activeAd = allAds.find(ad => ad.active);
+    if (!activeAd) return null;
+
+    return (
+      <div className="w-full flex justify-center py-4 px-4 md:px-12">
+        <div className="w-full max-w-[728px] h-[90px] bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden flex items-center justify-center shadow-lg border border-gray-200 dark:border-slate-700">
+          {activeAd.type === 'image' && (
+            <a href={activeAd.link} target="_blank" rel="noopener noreferrer" className="w-full h-full">
+              <img src={activeAd.content} alt="Advertisement" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            </a>
+          )}
+          {activeAd.type === 'video' && (
+            <video src={activeAd.content} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+          )}
+          {activeAd.type === 'code' && (
+            <div className="w-full h-full overflow-hidden" dangerouslySetInnerHTML={{ __html: activeAd.content }} />
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderAdminAds = () => (
+    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
+      <div className={cardClass}>
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
+          <h2 className={`text-3xl font-black tracking-tight ${textPrimary}`}>বিজ্ঞাপন ব্যবস্থাপনা</h2>
+          <button onClick={()=>setShowAddAdModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-2 shadow-lg transition-all active:scale-95"><Plus size={20}/> নতুন বিজ্ঞাপন</button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-700">
+                <th className="pb-6 text-[10px] uppercase font-black text-slate-400">বিজ্ঞাপন</th>
+                <th className="pb-6 text-[10px] uppercase font-black text-slate-400">টাইপ</th>
+                <th className="pb-6 text-[10px] uppercase font-black text-slate-400">স্ট্যাটাস</th>
+                <th className="pb-6 text-[10px] uppercase font-black text-slate-400 text-right">অ্যাকশন</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
+              {allAds.map(ad=>(
+                <tr key={ad.id} className="hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-colors">
+                  <td className="py-6">
+                    <div className="w-32 h-10 bg-slate-100 dark:bg-slate-800 rounded overflow-hidden flex items-center justify-center border border-slate-200 dark:border-slate-700">
+                      {ad.type === 'image' && <img src={ad.content} className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
+                      {ad.type === 'video' && <video src={ad.content} className="w-full h-full object-cover" />}
+                      {ad.type === 'code' && <div className="text-[8px] truncate p-1">{ad.content}</div>}
+                    </div>
+                  </td>
+                  <td className={`py-6 text-sm font-black uppercase ${textPrimary}`}>{ad.type}</td>
+                  <td className="py-6">
+                    <button 
+                      onClick={async () => {
+                        const adRef = doc(firestore, 'ads', ad.id);
+                        await updateDoc(adRef, { active: !ad.active });
+                      }}
+                      className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${ad.active ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}
+                    >
+                      {ad.active ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
+                    </button>
+                  </td>
+                  <td className="py-6 text-right flex justify-end gap-3">
+                    <button onClick={()=>setEditingAd(ad)} title="এডিট" className="p-2 text-slate-400 hover:text-emerald-600 transition-colors"><Edit size={20}/></button>
+                    <button onClick={()=>deleteAd(ad.id)} title="ডিলিট" className="p-2 text-rose-500 hover:scale-110 transition-transform"><Trash2 size={20}/></button>
+                  </td>
+                </tr>
+              ))}
+              {allAds.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-12 text-center text-slate-400 font-bold uppercase">কোনো বিজ্ঞাপন নেই</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showAddAdModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 backdrop-blur-md bg-black/30">
+          <div className="absolute inset-0" onClick={()=>setShowAddAdModal(false)}></div>
+          <form onSubmit={handleAddAd} className={`${isDarkMode?'bg-slate-900':'bg-white'} p-10 rounded-[48px] shadow-2xl w-full max-w-lg relative animate-in zoom-in-95 duration-200`}>
+            <h3 className="text-3xl font-black text-emerald-600 mb-8 uppercase tracking-tight">নতুন বিজ্ঞাপন যোগ</h3>
+            <div className="space-y-6">
+              <select name="type" required className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 outline-none ${textPrimary}`}>
+                <option value="image">ছবি (Image)</option>
+                <option value="video">ভিডিও (Video)</option>
+                <option value="code">কোড (JS/HTML Code)</option>
+              </select>
+              <textarea name="content" required className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 outline-none h-32 ${textPrimary}`} placeholder="URL অথবা কোড লিখুন..." />
+              <input name="link" className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 outline-none ${textPrimary}`} placeholder="লিঙ্ক (ঐচ্ছিক)" />
+              <button type="submit" className="w-full bg-emerald-600 text-white font-black py-5 rounded-3xl mt-4 transition-all">সেভ করুন</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingAd && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 backdrop-blur-md bg-black/30">
+          <div className="absolute inset-0" onClick={()=>setEditingAd(null)}></div>
+          <form onSubmit={saveAdEdit} className={`${isDarkMode?'bg-slate-900':'bg-white'} p-10 rounded-[48px] shadow-2xl w-full max-w-lg relative animate-in zoom-in-95 duration-200`}>
+            <h3 className="text-3xl font-black text-emerald-600 mb-8 uppercase tracking-tight">বিজ্ঞাপন এডিট</h3>
+            <div className="space-y-6">
+              <select value={editingAd.type} onChange={e=>setEditingAd({...editingAd, type:e.target.value as any})} required className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 outline-none ${textPrimary}`}>
+                <option value="image">ছবি (Image)</option>
+                <option value="video">ভিডিও (Video)</option>
+                <option value="code">কোড (JS/HTML Code)</option>
+              </select>
+              <textarea value={editingAd.content} onChange={e=>setEditingAd({...editingAd, content:e.target.value})} required className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 outline-none h-32 ${textPrimary}`} placeholder="URL অথবা কোড লিখুন..." />
+              <input value={editingAd.link || ''} onChange={e=>setEditingAd({...editingAd, link:e.target.value})} className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 outline-none ${textPrimary}`} placeholder="লিঙ্ক (ঐচ্ছিক)" />
+              <button type="submit" className="w-full bg-emerald-600 text-white font-black py-5 rounded-3xl mt-4 transition-all">আপডেট করুন</button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget as HTMLFormElement);
@@ -1339,6 +1517,7 @@ const App: React.FC = () => {
       case 'admin-members': return renderAdminMembers();
       case 'admin-businesses': return renderAdminBusinesses();
       case 'admin-notices': return renderAdminNotices();
+      case 'admin-ads': return renderAdminAds();
       case 'admin-contact': return renderAdminContact();
       default: return currentUser?.role === 'admin' ? renderAdminDashboard() : renderMemberDashboard();
     }
@@ -1390,6 +1569,7 @@ const App: React.FC = () => {
         </header>
 
         <div className="p-4 md:p-12">{renderContent()}</div>
+        <AdBanner />
 
         {renderNoticePanel()}
 

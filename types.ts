@@ -50,4 +50,13 @@ export interface ContactMessage {
   status: 'new' | 'read' | 'replied';
 }
 
-export type AppView = 'welcome' | 'dashboard' | 'notices' | 'about' | 'history' | 'contact' | 'admin-members' | 'admin-notices' | 'admin-businesses' | 'admin-contact';
+export interface Ad {
+  id: string;
+  type: 'image' | 'video' | 'code';
+  content: string;
+  link?: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export type AppView = 'welcome' | 'dashboard' | 'notices' | 'about' | 'history' | 'contact' | 'admin-members' | 'admin-notices' | 'admin-businesses' | 'admin-contact' | 'admin-ads';
