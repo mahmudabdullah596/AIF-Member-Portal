@@ -1093,6 +1093,23 @@ const App: React.FC = () => {
   const AdBanner = () => {
     const activeAd = allAds.find(ad => ad.active);
     const adRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [scale, setScale] = useState(1);
+
+    useEffect(() => {
+      const updateScale = () => {
+        if (containerRef.current) {
+          const width = containerRef.current.offsetWidth;
+          // Calculate scale based on standard 728px width
+          const newScale = Math.min(1, width / 728);
+          setScale(newScale);
+        }
+      };
+
+      updateScale();
+      window.addEventListener('resize', updateScale);
+      return () => window.removeEventListener('resize', updateScale);
+    }, [activeAd]);
 
     useEffect(() => {
       if (activeAd?.type === 'code' && adRef.current) {
@@ -1125,19 +1142,32 @@ const App: React.FC = () => {
     if (!activeAd) return null;
 
     return (
-      <div className="w-full flex justify-center py-4 px-4 md:px-12">
-        <div className="w-full max-w-[728px] h-[90px] bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden flex items-center justify-center shadow-lg border border-gray-200 dark:border-slate-700">
-          {activeAd.type === 'image' && (
-            <a href={activeAd.link} target="_blank" rel="noopener noreferrer" className="w-full h-full">
-              <img src={activeAd.content} alt="Advertisement" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            </a>
-          )}
-          {activeAd.type === 'video' && (
-            <video src={activeAd.content} autoPlay loop muted playsInline className="w-full h-full object-cover" />
-          )}
-          {activeAd.type === 'code' && (
-            <div ref={adRef} className="w-full h-full overflow-hidden flex items-center justify-center" />
-          )}
+      <div className="w-full flex justify-center py-4 px-4 md:px-12" ref={containerRef}>
+        <div 
+          className="w-full max-w-[728px] bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden flex items-center justify-center shadow-lg border border-gray-200 dark:border-slate-700 transition-all duration-300"
+          style={{ height: `${90 * scale}px` }}
+        >
+          <div 
+            className="flex items-center justify-center shrink-0"
+            style={{ 
+              width: '728px', 
+              height: '90px', 
+              transform: `scale(${scale})`,
+              transformOrigin: 'center center'
+            }}
+          >
+            {activeAd.type === 'image' && (
+              <a href={activeAd.link} target="_blank" rel="noopener noreferrer" className="w-full h-full">
+                <img src={activeAd.content} alt="Advertisement" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              </a>
+            )}
+            {activeAd.type === 'video' && (
+              <video src={activeAd.content} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+            )}
+            {activeAd.type === 'code' && (
+              <div ref={adRef} className="w-full h-full overflow-hidden flex items-center justify-center" />
+            )}
+          </div>
         </div>
       </div>
     );
