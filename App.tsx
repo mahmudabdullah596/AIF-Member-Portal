@@ -1093,23 +1093,15 @@ const App: React.FC = () => {
   const AdBanner = () => {
     const activeAd = allAds.find(ad => ad.active);
     const adRef = useRef<HTMLDivElement>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [scale, setScale] = useState(1);
+    const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
     useEffect(() => {
-      const updateScale = () => {
-        if (containerRef.current) {
-          const width = containerRef.current.offsetWidth;
-          // Calculate scale based on standard 728px width
-          const newScale = Math.min(1, width / 728);
-          setScale(newScale);
-        }
+      const handleResize = () => {
+        setIsMobile(window.innerWidth < 768);
       };
-
-      updateScale();
-      window.addEventListener('resize', updateScale);
-      return () => window.removeEventListener('resize', updateScale);
-    }, [activeAd]);
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
       if (activeAd?.type === 'code' && adRef.current) {
@@ -1137,15 +1129,25 @@ const App: React.FC = () => {
           adRef.current?.appendChild(newScript);
         });
       }
-    }, [activeAd]);
+    }, [activeAd, isMobile]);
 
     if (!activeAd) return null;
 
+    // Mobile: 320x50, Desktop: 728x90
+    const targetWidth = isMobile ? 320 : 728;
+    const targetHeight = isMobile ? 50 : 90;
+    // Scale the 728x90 content to fit the target width
+    const scale = isMobile ? (320 / 728) : 1;
+
     return (
-      <div className="w-full flex justify-center py-4 px-4 md:px-12" ref={containerRef}>
+      <div className="w-full flex justify-center py-6 px-4">
         <div 
-          className="w-full max-w-[728px] bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden flex items-center justify-center shadow-lg border border-gray-200 dark:border-slate-700 transition-all duration-300"
-          style={{ height: `${90 * scale}px` }}
+          className="bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden flex items-center justify-center shadow-xl border border-gray-200 dark:border-slate-700 transition-all duration-500"
+          style={{ 
+            width: `${targetWidth}px`, 
+            height: `${targetHeight}px`,
+            position: 'relative'
+          }}
         >
           <div 
             className="flex items-center justify-center shrink-0"
@@ -1153,7 +1155,8 @@ const App: React.FC = () => {
               width: '728px', 
               height: '90px', 
               transform: `scale(${scale})`,
-              transformOrigin: 'center center'
+              transformOrigin: 'center center',
+              position: 'absolute'
             }}
           >
             {activeAd.type === 'image' && (
