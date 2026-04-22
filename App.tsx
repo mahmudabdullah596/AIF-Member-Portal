@@ -78,7 +78,7 @@ const App: React.FC = () => {
   const [view, setView] = useState<AppView>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const [isNoticePanelOpen, setIsNoticePanelOpen] = useState(false);
   
   // Auth states
