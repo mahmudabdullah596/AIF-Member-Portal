@@ -15,6 +15,7 @@ export const members: Member[] = Array.from({ length: 50 }).map((_, i) => ({
   profitShare: 1500 + (Math.random() * 200),
   avatar: `https://picsum.photos/seed/member${i}/200`,
   role: 'member',
+  password: '123456',
 }));
 
 export const transactions: Transaction[] = [

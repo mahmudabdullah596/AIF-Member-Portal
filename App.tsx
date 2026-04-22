@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Member, AppView, Transaction, Notice, BusinessUpdate, ContactMessage, Ad } from './types';
+import { Member, AppView, Transaction, Notice, BusinessUpdate, ContactMessage, Ad, DepositRequest } from './types';
 import { members as initialMembers, transactions as initialTransactions, notices as initialNotices, businesses as initialBusinesses } from './mockData';
 import { getForumSupport } from './geminiService';
-import { db as firestore } from './firebase';
+import { db as firestore, auth } from './firebase';
 import { 
   collection, 
   getDocs, 
@@ -16,6 +16,7 @@ import {
   orderBy,
   onSnapshot
 } from 'firebase/firestore';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { 
   LayoutDashboard, 
   Bell, 
@@ -52,7 +53,16 @@ import {
   Phone,
   MapPin,
   MessageCircle,
-  Monitor
+  Monitor,
+  Settings,
+  User,
+  Lock,
+  Smartphone,
+  CreditCard,
+  Banknote,
+  Clock,
+  ExternalLink,
+  ClipboardList
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -63,6 +73,7 @@ const App: React.FC = () => {
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [allAds, setAllAds] = useState<Ad[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
+  const [allDepositRequests, setAllDepositRequests] = useState<DepositRequest[]>([]);
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
   const [view, setView] = useState<AppView>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
@@ -85,6 +96,9 @@ const App: React.FC = () => {
   const [googleTokens, setGoogleTokens] = useState<any>(null);
   const [spreadsheetId, setSpreadsheetId] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
 
   // Admin Modals/Edit states
   const [editingMember, setEditingMember] = useState<Member | null>(null);
@@ -156,6 +170,13 @@ const App: React.FC = () => {
       console.error("Ads listener error:", error);
     });
 
+    const unsubDepositRequests = onSnapshot(query(collection(firestore, 'deposit_requests'), orderBy('date', 'desc')), (snapshot) => {
+      const depositData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as DepositRequest));
+      setAllDepositRequests(depositData);
+    }, (error) => {
+      console.error("Deposit requests listener error:", error);
+    });
+
     return () => {
       unsubMembers();
       unsubNotices();
@@ -163,6 +184,7 @@ const App: React.FC = () => {
       unsubTransactions();
       unsubContact();
       unsubAds();
+      unsubDepositRequests();
     };
   }, []);
 
@@ -196,7 +218,8 @@ const App: React.FC = () => {
         totalDue: 0,
         profitShare: 0,
         avatar: 'https://ui-avatars.com/api/?name=Admin&background=059669&color=fff',
-        role: 'admin'
+        role: 'admin',
+        password: 'Am1653@#'
       };
       setCurrentUser(adminUser);
       setIsLoggedIn(true);
@@ -205,11 +228,46 @@ const App: React.FC = () => {
     }
     const user = allMembers.find(m => m.id === loginId);
     if (user) {
+      // Check for password if it exists in the member record
+      if (user.password && user.password !== loginPass) {
+        alert('ভুল পাসওয়ার্ড!');
+        return;
+      }
       setCurrentUser(user);
       setIsLoggedIn(true);
       setView('dashboard');
     } else {
       alert('ভুল সদস্য আইডি বা পাসওয়ার্ড!');
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) return;
+    
+    setIsResetting(true);
+    try {
+      // Check if email exists in our members list
+      const member = allMembers.find(m => m.email === resetEmail);
+      if (!member) {
+        alert('এই ইমেইলটি আমাদের সিস্টেমে পাওয়া যায়নি!');
+        setIsResetting(false);
+        return;
+      }
+
+      await sendPasswordResetEmail(auth, resetEmail);
+      alert('পাসওয়ার্ড রিসেট লিংক আপনার ইমেইলে পাঠানো হয়েছে। অনুগ্রহ করে চেক করুন।');
+      setShowForgotPasswordModal(false);
+      setResetEmail('');
+    } catch (error: any) {
+      console.error("Password reset error:", error);
+      if (error.code === 'auth/user-not-found') {
+        alert('এই ইমেইলটি আমাদের সিস্টেমে পাওয়া যায়নি!');
+      } else {
+        alert('পাসওয়ার্ড রিসেট করতে সমস্যা হয়েছে। অনুগ্রহ করে পরে চেষ্টা করুন।');
+      }
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -345,8 +403,7 @@ const App: React.FC = () => {
       await setDoc(doc(firestore, 'businesses', businessId), newBusiness);
       setShowAddBusinessModal(false);
     } catch (error) {
-      console.error(error);
-      alert('প্রজেক্ট যোগ করতে সমস্যা হয়েছে। ফায়ারবেজ পারমিশন চেক করুন।');
+      alert('প্রজেক্ট যোগ করতে সমস্যা হয়েছে।');
     }
   };
 
@@ -557,6 +614,120 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!activeMember) return;
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+    const phone = formData.get('phone') as string;
+    const password = formData.get('password') as string;
+    
+    try {
+      const memberRef = doc(firestore, 'members', activeMember.id);
+      const updateData: any = { email, phone };
+      if (password) updateData.password = password;
+      
+      await updateDoc(memberRef, updateData);
+      alert('প্রোফাইল সফলভাবে আপডেট হয়েছে!');
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      alert('আপডেট করতে সমস্যা হয়েছে।');
+    }
+  };
+
+  const handleSendResetLink = async () => {
+    if (!activeMember?.email) {
+      alert('অনুগ্রহ করে আগে আপনার ইমেইল সেট করুন।');
+      return;
+    }
+    setIsResetting(true);
+    try {
+      await sendPasswordResetEmail(auth, activeMember.email);
+      alert('আপনার ইমেইলে পাসওয়ার্ড রিসেট লিংক পাঠানো হয়েছে।');
+    } catch (error: any) {
+      console.error("Error sending reset link:", error);
+      alert('লিংক পাঠাতে সমস্যা হয়েছে। আপনার ইমেইলটি কি ফায়ারবেজে রেজিস্টার্ড?');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleDepositSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!activeMember) return;
+    const formData = new FormData(e.currentTarget);
+    const amount = Number(formData.get('amount'));
+    const fromNumber = formData.get('fromNumber') as string;
+    const trxId = formData.get('trxId') as string;
+    const paymentMethod = formData.get('paymentMethod') as string;
+
+    const depositId = `dep-${Date.now()}`;
+    const newRequest: DepositRequest = {
+      id: depositId,
+      memberId: activeMember.id,
+      memberName: activeMember.name,
+      amount,
+      fromNumber,
+      trxId,
+      paymentMethod,
+      date: new Date().toLocaleDateString('bn-BD'),
+      status: 'pending'
+    };
+
+    try {
+      await setDoc(doc(firestore, 'deposit_requests', depositId), newRequest);
+      alert('আপনার পেমেন্ট রিকোয়েস্টটি সফলভাবে পাঠানো হয়েছে। এডমিন যাচাই করে অ্যাপ্রুভ করবেন।');
+      setView('dashboard');
+    } catch (error) {
+      console.error("Error submitting deposit:", error);
+      alert('সাবমিট করতে সমস্যা হয়েছে।');
+    }
+  };
+
+  const handleApproveDeposit = async (request: DepositRequest) => {
+    if (!window.confirm('আপনি কি এই পেমেন্টটি অ্যাপ্রুভ করতে চান?')) return;
+    try {
+      // 1. Update the request status
+      await updateDoc(doc(firestore, 'deposit_requests', request.id), { status: 'approved' });
+      
+      // 2. Create a transaction
+      const txId = `tx-${Date.now()}`;
+      const newTx: Transaction = {
+        id: txId,
+        memberId: request.memberId,
+        amount: request.amount,
+        date: request.date,
+        type: 'deposit',
+        description: `অনলাইন পেমেন্ট (${request.paymentMethod}) - Trx: ${request.trxId}`
+      };
+      await setDoc(doc(firestore, 'transactions', txId), newTx);
+
+      // 3. Update member's total savings
+      const member = allMembers.find(m => m.id === request.memberId);
+      if (member) {
+        const memberRef = doc(firestore, 'members', member.id);
+        await updateDoc(memberRef, {
+          totalSaved: member.totalSaved + request.amount
+        });
+      }
+      alert('পেমেন্টটি সফলভাবে অ্যাপ্রুভ করা হয়েছে।');
+    } catch (error) {
+      console.error("Error approving deposit:", error);
+      alert('অ্যাপ্রুভ করতে সমস্যা হয়েছে।');
+    }
+  };
+
+  const handleDeleteDeposit = async (id: string) => {
+    if (window.confirm('আপনি কি এই রিকোয়েস্টটি ডিলিট করতে চান?')) {
+      try {
+        await deleteDoc(doc(firestore, 'deposit_requests', id));
+      } catch (error) {
+        console.error("Error deleting deposit:", error);
+        alert('ডিলিট করতে সমস্যা হয়েছে।');
+      }
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!chatMessage.trim()) return;
     const msg = chatMessage;
@@ -600,7 +771,55 @@ const App: React.FC = () => {
           <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl md:rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all">
             প্রবেশ করুন <ArrowRight size={20} />
           </button>
+          <div className="text-center mt-4">
+            <button 
+              type="button" 
+              onClick={() => setShowForgotPasswordModal(true)} 
+              className={`text-xs font-bold ${textSecondary} hover:text-emerald-600 transition-colors`}
+            >
+              পাসওয়ার্ড ভুলে গেছেন?
+            </button>
+          </div>
         </form>
+
+        {showForgotPasswordModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md bg-black/30">
+            <div className="absolute inset-0" onClick={() => setShowForgotPasswordModal(false)}></div>
+            <form onSubmit={handleForgotPassword} className={`${isDarkMode ? 'bg-slate-900' : 'bg-white'} p-8 md:p-10 rounded-[40px] shadow-2xl w-full max-w-sm relative animate-in zoom-in-95 duration-200`}>
+              <h3 className="text-2xl font-black text-emerald-600 mb-2 uppercase tracking-tight">পাসওয়ার্ড রিসেট</h3>
+              <p className={`text-xs ${textSecondary} mb-8`}>আপনার নিবন্ধিত ইমেইল এড্রেসটি লিখুন। আমরা আপনাকে একটি পাসওয়ার্ড রিসেট লিংক পাঠাবো।</p>
+              <div className="space-y-6">
+                <div>
+                  <label className={`block text-[10px] font-black uppercase mb-2 ${textSecondary}`}>ইমেইল এড্রেস</label>
+                  <input 
+                    type="email" 
+                    required 
+                    className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none ${textPrimary}`} 
+                    placeholder="example@email.com"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowForgotPasswordModal(false)}
+                    className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black rounded-2xl transition-all"
+                  >
+                    বাতিল
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={isResetting}
+                    className="flex-[2] bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-xl transition-all disabled:opacity-50"
+                  >
+                    {isResetting ? 'পাঠানো হচ্ছে...' : 'লিংক পাঠান'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -637,8 +856,24 @@ const App: React.FC = () => {
               <button onClick={() => { setView('admin-ads'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all ${view === 'admin-ads' ? 'bg-emerald-600 text-white shadow-lg' : `${textSecondary} hover:bg-emerald-50 dark:hover:bg-emerald-900/10`}`}>
                 <Monitor size={20} /> <span className="font-bold">বিজ্ঞাপন নিয়ন্ত্রণ</span>
               </button>
+              <button 
+                onClick={() => { setView('admin-deposits'); setSidebarOpen(false); }} 
+                className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all ${view === 'admin-deposits' ? 'bg-emerald-600 text-white shadow-lg' : `${textSecondary} hover:bg-emerald-50 dark:hover:bg-emerald-900/10`}`}
+              >
+                <div className="flex items-center gap-3">
+                  <Banknote size={20} /> <span className="font-bold">পেমেন্ট রিকোয়েস্ট</span>
+                </div>
+                {allDepositRequests.filter(r => r.status === 'pending').length > 0 && (
+                  <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-1 rounded-full animate-pulse">
+                    {allDepositRequests.filter(r => r.status === 'pending').length}
+                  </span>
+                )}
+              </button>
             </>
           )}
+          <button onClick={() => { setView('profile-settings'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all ${view === 'profile-settings' ? 'bg-emerald-600 text-white shadow-lg' : `${textSecondary} hover:bg-emerald-50 dark:hover:bg-emerald-900/10`}`}>
+            <Settings size={20} /> <span className="font-bold">প্রোফাইল সেটিংস</span>
+          </button>
           <button onClick={() => { setView('about'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all ${view === 'about' ? 'bg-emerald-600 text-white shadow-lg' : `${textSecondary} hover:bg-emerald-50 dark:hover:bg-emerald-900/10`}`}>
             <Info size={20} /> <span className="font-bold">আমাদের সম্পর্কে</span>
           </button>
@@ -668,8 +903,11 @@ const App: React.FC = () => {
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700">
       <div className={`${cardClass} border-none bg-gradient-to-br from-emerald-600 to-green-700 text-white p-6 md:p-8 relative overflow-hidden`}>
         <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10 relative z-10">
-          <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+          <div className="relative group cursor-pointer" onClick={() => setView('profile-settings')}>
             <img src={activeMember?.avatar} className="w-24 h-24 md:w-36 md:h-36 rounded-2xl md:rounded-3xl object-cover border-4 border-white/20 shadow-2xl" />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl md:rounded-3xl">
+              <Camera className="text-white w-8 h-8" />
+            </div>
           </div>
           <div className="text-center md:text-left flex-1">
             <div className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black inline-block mb-2 md:mb-3 uppercase tracking-widest">ID: {activeMember?.id}</div>
@@ -691,7 +929,15 @@ const App: React.FC = () => {
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
         <div className={`lg:col-span-3 ${cardClass} p-6 md:p-8`}>
-          <h3 className={`font-black text-lg md:text-xl mb-6 flex items-center gap-2 ${textPrimary}`}><Wallet size={20} className="text-emerald-600" /> আর্থিক স্থিতি</h3>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <h3 className={`font-black text-lg md:text-xl flex items-center gap-2 ${textPrimary}`}><Wallet size={20} className="text-emerald-600" /> আর্থিক স্থিতি</h3>
+            <button 
+              onClick={() => setView('deposit')}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-black text-xs md:text-sm shadow-xl flex items-center gap-2 active:scale-95 transition-all"
+            >
+              <Coins size={18} /> সঞ্চয় জমা দিন
+            </button>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
             <div className="p-5 md:p-6 bg-slate-50 dark:bg-slate-700/50 rounded-2xl md:rounded-3xl">
               <div className="text-[10px] opacity-50 uppercase font-black mb-1">মাসিক সঞ্চয় হার</div>
@@ -1176,6 +1422,279 @@ const App: React.FC = () => {
     );
   };
 
+  const renderProfileSettings = () => (
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className={`${cardClass} border-none bg-gradient-to-br from-emerald-600 to-green-700 text-white p-8 md:p-12 relative overflow-hidden`}>
+        <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+          <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+            <img src={activeMember?.avatar} className="w-32 h-32 md:w-40 md:h-40 rounded-3xl object-cover border-4 border-white/20 shadow-2xl" />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-3xl">
+              <Camera className="text-white w-10 h-10" />
+            </div>
+          </div>
+          <div className="text-center md:text-left">
+            <h2 className="text-3xl md:text-4xl font-black mb-2 uppercase tracking-tight">প্রোফাইল সেটিংস</h2>
+            <p className="opacity-90 font-medium">আপনার ব্যক্তিগত তথ্য ও নিরাপত্তা নিয়ন্ত্রণ করুন</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          <div className={cardClass}>
+            <h3 className={`font-black text-xl mb-8 flex items-center gap-2 ${textPrimary}`}><User size={20} className="text-emerald-600" /> ব্যক্তিগত তথ্য</h3>
+            <form onSubmit={handleUpdateProfile} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className={`block text-[10px] font-black uppercase mb-2 ${textSecondary}`}>সদস্য আইডি (অপরিবর্তনীয়)</label>
+                  <input disabled value={activeMember?.id} className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none opacity-50 ${textPrimary}`} />
+                </div>
+                <div>
+                  <label className={`block text-[10px] font-black uppercase mb-2 ${textSecondary}`}>নাম (অপরিবর্তনীয়)</label>
+                  <input disabled value={activeMember?.name} className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none opacity-50 ${textPrimary}`} />
+                </div>
+                <div>
+                  <label className={`block text-[10px] font-black uppercase mb-2 ${textSecondary}`}>ইমেইল এড্রেস</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input name="email" type="email" defaultValue={activeMember?.email} className={`w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none ${textPrimary}`} placeholder="example@email.com" />
+                  </div>
+                </div>
+                <div>
+                  <label className={`block text-[10px] font-black uppercase mb-2 ${textSecondary}`}>মোবাইল নম্বর</label>
+                  <div className="relative">
+                    <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input name="phone" type="text" defaultValue={activeMember?.phone} className={`w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none ${textPrimary}`} placeholder="01XXX-XXXXXX" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="pt-4">
+                <h4 className={`font-black text-sm mb-4 flex items-center gap-2 ${textPrimary}`}><Lock size={16} className="text-emerald-600" /> নিরাপত্তা</h4>
+                <div className="max-w-md">
+                  <label className={`block text-[10px] font-black uppercase mb-2 ${textSecondary}`}>নতুন পাসওয়ার্ড (পরিবর্তন করতে চাইলে)</label>
+                  <input name="password" type="password" className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none ${textPrimary}`} placeholder="••••••••" />
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-slate-100 dark:border-slate-700">
+                <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-10 py-4 rounded-2xl shadow-xl transition-all active:scale-95">
+                  তথ্য সংরক্ষণ করুন
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div className="lg:col-span-1 space-y-8">
+          <div className={cardClass}>
+            <h3 className={`font-black text-xl mb-6 flex items-center gap-2 ${textPrimary}`}><Bell size={20} className="text-emerald-600" /> পাসওয়ার্ড রিসেট</h3>
+            <p className={`text-xs ${textSecondary} mb-6 leading-relaxed`}>
+              আপনি যদি আপনার পাসওয়ার্ড ভুলে যান বা রিসেট করতে চান, তবে নিচের বাটনে ক্লিক করুন। আপনার নিবন্ধিত ইমেইলে একটি রিসেট লিংক পাঠানো হবে।
+            </p>
+            <button 
+              onClick={handleSendResetLink}
+              disabled={isResetting}
+              className="w-full bg-slate-900 dark:bg-slate-700 text-white font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 disabled:opacity-50"
+            >
+              {isResetting ? 'পাঠানো হচ্ছে...' : 'রিসেট লিংক পাঠান'}
+            </button>
+          </div>
+
+          <div className={`${cardClass} bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800/30`}>
+            <div className="flex items-start gap-4">
+              <div className="bg-emerald-600 p-2 rounded-lg text-white">
+                <ShieldCheck size={20} />
+              </div>
+              <div>
+                <h4 className={`font-black text-sm mb-1 ${textPrimary}`}>নিরাপত্তা টিপস</h4>
+                <p className={`text-[10px] ${textSecondary} leading-relaxed`}>
+                  আপনার পাসওয়ার্ড কারো সাথে শেয়ার করবেন না। নিয়মিত পাসওয়ার্ড পরিবর্তন করা আপনার অ্যাকাউন্টের নিরাপত্তা নিশ্চিত করে।
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDepositPage = () => (
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className={`${cardClass} border-none bg-gradient-to-br from-emerald-600 to-green-700 text-white p-8 md:p-12 relative overflow-hidden`}>
+        <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+          <div className="bg-white/20 p-6 rounded-3xl backdrop-blur-md">
+            <Coins size={48} className="text-white" />
+          </div>
+          <div className="text-center md:text-left">
+            <h2 className="text-3xl md:text-4xl font-black mb-2 uppercase tracking-tight">সঞ্চয় জমা দিন</h2>
+            <p className="opacity-90 font-medium">নিচের একাউন্টগুলোতে টাকা পাঠিয়ে তথ্যাদি সাবমিট করুন</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-1 space-y-6">
+          <div className={cardClass}>
+            <h3 className={`font-black text-lg mb-6 flex items-center gap-2 ${textPrimary}`}><Banknote size={20} className="text-emerald-600" /> পেমেন্ট মেথড</h3>
+            <div className="space-y-4 text-sm font-bold">
+              <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-100 dark:border-emerald-800">
+                <div className="text-emerald-600 mb-1">বিকাশ (পার্সোনাল)</div>
+                <div className={textPrimary}>০১৭২৩৩৬২৩৭৬</div>
+              </div>
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-800">
+                <div className="text-blue-600 mb-1">ব্যাংক একাউন্ট</div>
+                <div className={textPrimary}>২০৫০১০৯০২০৩২৮৮০০০</div>
+                <div className={`text-[10px] ${textSecondary}`}>ইসলামী ব্যাংক বাংলাদেশ</div>
+              </div>
+              <div className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-800">
+                <div className="text-amber-600 mb-1">নগদ (পার্সোনাল)</div>
+                <div className={textPrimary}>০১৭২৩৩৬২৩৭৬</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className={`${cardClass} bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800/30`}>
+             <div className="flex gap-4">
+                <AlertCircle className="text-amber-600 shrink-0" />
+                <div>
+                   <h4 className="font-black text-sm text-amber-900 dark:text-amber-400 mb-1">সতর্কতা</h4>
+                   <p className="text-[10px] leading-relaxed text-amber-800 dark:text-amber-500">টাকা পাঠানোর পর ট্রানজেকশন আইডি (Trx ID) অবশ্যই সংগ্রহ করে রাখুন। এটি ছাড়া আপনার সঞ্চয় গ্রহণ করা হবে না।</p>
+                </div>
+             </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-2">
+          <div className={cardClass}>
+            <h3 className={`font-black text-xl mb-8 flex items-center gap-2 ${textPrimary}`}><ClipboardList size={22} className="text-emerald-600" /> পেমেন্ট সাবমিট ফরম</h3>
+            <form onSubmit={handleDepositSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className={`block text-[10px] font-black uppercase mb-2 ${textSecondary}`}>পেমেন্ট মাধ্যম</label>
+                  <select name="paymentMethod" required className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none ${textPrimary}`}>
+                    <option value="Bkash">বিকাশ</option>
+                    <option value="Nagad">নগদ</option>
+                    <option value="Bank">ব্যাংক</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={`block text-[10px] font-black uppercase mb-2 ${textSecondary}`}>টাকার পরিমাণ (৳)</label>
+                  <input name="amount" type="number" required placeholder="5000" className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none ${textPrimary}`} />
+                </div>
+                <div>
+                  <label className={`block text-[10px] font-black uppercase mb-2 ${textSecondary}`}>কোন নাম্বার থেকে পাঠিয়েছেন</label>
+                  <input name="fromNumber" type="text" required placeholder="017XXXXXXXX" className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none ${textPrimary}`} />
+                </div>
+                <div>
+                  <label className={`block text-[10px] font-black uppercase mb-2 ${textSecondary}`}>ট্রানজেকশন আইডি (Trx ID)</label>
+                  <input name="trxId" type="text" required placeholder="AXB55CD8" className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none ${textPrimary}`} />
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-slate-100 dark:border-slate-700">
+                <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3">
+                  <Send size={20} /> সঞ্চয় জমা দিন
+                </button>
+              </div>
+            </form>
+          </div>
+          
+          <div className="mt-8">
+            <h3 className={`font-black text-lg mb-6 flex items-center gap-2 ${textPrimary}`}><Clock size={20} className="text-emerald-600" /> বর্তমান রিকোয়েস্ট স্ট্যাটাস</h3>
+            <div className="space-y-4">
+               {allDepositRequests.filter(r => r.memberId === activeMember?.id).slice(0, 5).map(req => (
+                 <div key={req.id} className={`${cardClass} flex items-center justify-between py-4`}>
+                    <div className="flex items-center gap-4">
+                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${req.status === 'approved' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                          {req.status === 'approved' ? <CheckCircle size={20} /> : <Clock size={20} />}
+                       </div>
+                       <div>
+                          <div className={`text-sm font-black ${textPrimary}`}>৳{req.amount.toLocaleString()}</div>
+                          <div className={`text-[10px] font-bold ${textSecondary}`}>{req.date} • {req.paymentMethod}</div>
+                       </div>
+                    </div>
+                    <div className={`text-[10px] font-black uppercase px-3 py-1 rounded-full ${req.status === 'approved' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'}`}>
+                       {req.status === 'approved' ? 'সফল হয়েছে' : 'পেন্ডিং'}
+                    </div>
+                 </div>
+               ))}
+               {allDepositRequests.filter(r => r.memberId === activeMember?.id).length === 0 && (
+                 <p className={`text-center py-8 font-bold ${textSecondary}`}>আপনার কোনো রিকোয়েস্ট নেই</p>
+               )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAdminDeposits = () => (
+    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
+      <div className={cardClass}>
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
+          <h2 className={`text-3xl font-black tracking-tight ${textPrimary}`}>পেমেন্ট রিকোয়েস্ট ম্যানেজমেন্ট</h2>
+          <div className="flex gap-4">
+             <div className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest">
+                অ্যাপ্রুভড: {allDepositRequests.filter(r => r.status === 'approved').length}
+             </div>
+             <div className="bg-amber-100 dark:bg-amber-900/30 text-amber-600 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest">
+                পেন্ডিং: {allDepositRequests.filter(r => r.status === 'pending').length}
+             </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-700">
+                <th className="pb-6 text-[10px] uppercase font-black text-slate-400">সদস্য</th>
+                <th className="pb-6 text-[10px] uppercase font-black text-slate-400">মাধ্যম ও নম্বর</th>
+                <th className="pb-6 text-[10px] uppercase font-black text-slate-400">Trx ID</th>
+                <th className="pb-6 text-[10px] uppercase font-black text-slate-400 text-right">পরিমাণ</th>
+                <th className="pb-6 text-[10px] uppercase font-black text-slate-400 text-right">অ্যাকশন</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
+              {allDepositRequests.filter(r => r.status === 'pending').map(req => (
+                <tr key={req.id} className="hover:bg-amber-50/30 dark:hover:bg-amber-900/5 transition-colors">
+                  <td className="py-6">
+                    <div className={`font-black text-sm ${textPrimary}`}>{req.memberName}</div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{req.date}</div>
+                  </td>
+                  <td className="py-6">
+                    <div className={`text-sm font-bold ${textPrimary}`}>{req.paymentMethod}</div>
+                    <div className={`text-[10px] font-black text-emerald-600`}>{req.fromNumber}</div>
+                  </td>
+                  <td className="py-6">
+                     <div className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg inline-block text-xs font-mono font-bold text-slate-600 dark:text-slate-300">
+                        {req.trxId}
+                     </div>
+                  </td>
+                  <td className={`py-6 text-sm font-black text-right text-emerald-600`}>৳{req.amount.toLocaleString()}</td>
+                  <td className="py-6 text-right flex justify-end gap-3">
+                    <button onClick={() => handleApproveDeposit(req)} title="অ্যাপ্রুভ করুন" className="p-2 bg-emerald-600 text-white rounded-xl shadow-lg hover:scale-110 transition-transform"><CheckCircle size={20}/></button>
+                    <button onClick={() => handleDeleteDeposit(req.id)} title="রিজেক্ট/ডিলিট" className="p-2 text-rose-500 hover:scale-110 transition-transform"><Trash2 size={20}/></button>
+                  </td>
+                </tr>
+              ))}
+              {allDepositRequests.filter(r => r.status === 'pending').length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-16 text-center">
+                     <div className="flex flex-col items-center gap-4 text-slate-400">
+                        <CheckCircle size={48} className="opacity-20" />
+                        <p className="font-black uppercase text-xs">কোনো পেন্ডিং রিকোয়েস্ট নেই</p>
+                     </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderAdminAds = () => (
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
       <div className={cardClass}>
@@ -1590,11 +2109,14 @@ const App: React.FC = () => {
       case 'notices': return renderNotices();
       case 'about': return renderAbout();
       case 'contact': return renderContact();
+      case 'deposit': return renderDepositPage();
+      case 'profile-settings': return renderProfileSettings();
       case 'admin-members': return renderAdminMembers();
       case 'admin-businesses': return renderAdminBusinesses();
       case 'admin-notices': return renderAdminNotices();
       case 'admin-ads': return renderAdminAds();
       case 'admin-contact': return renderAdminContact();
+      case 'admin-deposits': return renderAdminDeposits();
       default: return currentUser?.role === 'admin' ? renderAdminDashboard() : renderMemberDashboard();
     }
   };
@@ -1624,6 +2146,7 @@ const App: React.FC = () => {
                 {view === 'dashboard' ? 'ড্যাশবোর্ড' : 
                  view === 'notices' ? 'নোটিশ বোর্ড' : 
                  view === 'contact' ? 'যোগাযোগ' :
+                 view === 'profile-settings' ? 'প্রোফাইল সেটিংস' :
                  view === 'admin-contact' ? 'মেসেজ বক্স' :
                  view.includes('admin') ? 'এডমিন কন্ট্রোল' : 'আল ইত্তেহাদ'}
               </h1>
@@ -1634,10 +2157,15 @@ const App: React.FC = () => {
               <Bell size={20} />
               {allNotices.length > 0 && <span className="absolute top-2 right-2 md:top-2.5 md:right-2.5 w-2.5 h-2.5 md:w-3 md:h-3 bg-rose-500 rounded-full border-2 border-white dark:border-slate-950 shadow-md"></span>}
             </button>
-            <div className="flex items-center gap-2 md:gap-3">
-              <img src={activeMember?.avatar || currentUser?.avatar} className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl object-cover ring-2 ring-emerald-500/10" />
+            <div className="flex items-center gap-2 md:gap-3 cursor-pointer group" onClick={() => setView('profile-settings')}>
+              <div className="relative">
+                <img src={activeMember?.avatar || currentUser?.avatar} className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl object-cover ring-2 ring-emerald-500/10 group-hover:ring-emerald-500 transition-all" />
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 rounded-xl md:rounded-2xl flex items-center justify-center transition-opacity">
+                  <Settings size={14} className="text-white" />
+                </div>
+              </div>
               <div className="hidden sm:block">
-                <div className={`text-[10px] md:text-xs font-black ${textPrimary}`}>{activeMember?.name || currentUser?.name}</div>
+                <div className={`text-[10px] md:text-xs font-black ${textPrimary} group-hover:text-emerald-600 transition-colors`}>{activeMember?.name || currentUser?.name}</div>
                 <div className="text-[8px] md:text-[10px] font-black text-emerald-600 uppercase mt-0.5 tracking-widest">{currentUser?.id}</div>
               </div>
             </div>

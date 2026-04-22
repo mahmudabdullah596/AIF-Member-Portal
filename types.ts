@@ -11,6 +11,7 @@ export interface Member {
   profitShare: number;
   avatar: string;
   role: 'member' | 'admin';
+  password?: string;
 }
 
 export interface Transaction {
@@ -59,4 +60,16 @@ export interface Ad {
   createdAt: string;
 }
 
-export type AppView = 'welcome' | 'dashboard' | 'notices' | 'about' | 'history' | 'contact' | 'admin-members' | 'admin-notices' | 'admin-businesses' | 'admin-contact' | 'admin-ads';
+export interface DepositRequest {
+  id: string;
+  memberId: string;
+  memberName: string;
+  amount: number;
+  fromNumber: string;
+  trxId: string;
+  paymentMethod: string;
+  date: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
+export type AppView = 'welcome' | 'dashboard' | 'notices' | 'about' | 'history' | 'contact' | 'profile-settings' | 'deposit' | 'admin-members' | 'admin-notices' | 'admin-businesses' | 'admin-contact' | 'admin-ads' | 'admin-deposits';
