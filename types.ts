@@ -72,4 +72,19 @@ export interface DepositRequest {
   status: 'pending' | 'approved' | 'rejected';
 }
 
-export type AppView = 'welcome' | 'dashboard' | 'notices' | 'about' | 'history' | 'contact' | 'profile-settings' | 'deposit' | 'admin-members' | 'admin-notices' | 'admin-businesses' | 'admin-contact' | 'admin-ads' | 'admin-deposits';
+export interface MemberMessage {
+  id: string;
+  memberId: string;
+  memberName: string;
+  senderId: string;
+  senderName: string;
+  title: string;
+  message: string;
+  date: string;
+  read: boolean;
+  totalSavedAtTime?: number;
+  totalDueAtTime?: number;
+  channel?: 'inbox' | 'email' | 'whatsapp';
+}
+
+export type AppView = 'welcome' | 'dashboard' | 'notices' | 'about' | 'history' | 'contact' | 'profile-settings' | 'deposit' | 'admin-members' | 'admin-businesses' | 'admin-notices' | 'admin-contact' | 'admin-ads' | 'admin-deposits';
