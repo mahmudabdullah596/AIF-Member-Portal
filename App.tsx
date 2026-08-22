@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Member, AppView, Transaction, Notice, BusinessUpdate, ContactMessage, Ad, DepositRequest } from './types';
+import { Member, AppView, Transaction, Notice, BusinessUpdate, ContactMessage, Ad, DepositRequest, MemberMessage } from './types';
 import { members as initialMembers, transactions as initialTransactions, notices as initialNotices, businesses as initialBusinesses } from './mockData';
 import { getForumSupport } from './geminiService';
 import { db as firestore, auth } from './firebase';
@@ -62,7 +62,10 @@ import {
   Banknote,
   Clock,
   ExternalLink,
-  ClipboardList
+  ClipboardList,
+  Copy,
+  Check,
+  Share2
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -74,6 +77,7 @@ const App: React.FC = () => {
   const [allAds, setAllAds] = useState<Ad[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [allDepositRequests, setAllDepositRequests] = useState<DepositRequest[]>([]);
+  const [allMemberMessages, setAllMemberMessages] = useState<MemberMessage[]>([]);
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
   const [view, setView] = useState<AppView>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
@@ -110,6 +114,11 @@ const App: React.FC = () => {
   const [showAddBusinessModal, setShowAddBusinessModal] = useState(false);
   const [showAddAdModal, setShowAddAdModal] = useState(false);
   const [showAddPaymentModal, setShowAddPaymentModal] = useState<{ member: Member } | null>(null);
+  const [communicationMember, setCommunicationMember] = useState<Member | null>(null);
+  const [customMessageTitle, setCustomMessageTitle] = useState('');
+  const [customMessageBody, setCustomMessageBody] = useState('');
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [copiedText, setCopiedText] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const businessImageRef = useRef<HTMLInputElement>(null);
   const editBusinessImageRef = useRef<HTMLInputElement>(null);
@@ -177,6 +186,13 @@ const App: React.FC = () => {
       console.error("Deposit requests listener error:", error);
     });
 
+    const unsubMemberMessages = onSnapshot(query(collection(firestore, 'member_messages'), orderBy('date', 'desc')), (snapshot) => {
+      const msgData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as MemberMessage));
+      setAllMemberMessages(msgData);
+    }, (error) => {
+      console.error("Member messages listener error:", error);
+    });
+
     return () => {
       unsubMembers();
       unsubNotices();
@@ -185,6 +201,7 @@ const App: React.FC = () => {
       unsubContact();
       unsubAds();
       unsubDepositRequests();
+      unsubMemberMessages();
     };
   }, []);
 
@@ -199,6 +216,103 @@ const App: React.FC = () => {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, []);
+
+  // Format phone number for WhatsApp
+  const getCleanWhatsAppPhone = (phoneStr: string) => {
+    if (!phoneStr) return '';
+    let cleaned = phoneStr.replace(/[^0-9]/g, '');
+    if (cleaned.startsWith('0')) {
+      cleaned = '880' + cleaned.slice(1);
+    } else if (!cleaned.startsWith('880') && cleaned.length === 10) {
+      cleaned = '880' + cleaned;
+    }
+    return cleaned;
+  };
+
+  // Generate mailto link with member financial summary
+  const generateFinancialEmailLink = (member: Member, customSubject?: string, customNote?: string) => {
+    const subject = customSubject?.trim() || `আল ইত্তেহাদ ফোরাম - আর্থিক হিসাব বিবরণী ও নোটিশ (${member.name})`;
+    const body = `আসসালামু আলাইকুম ${member.name},
+
+আল ইত্তেহাদ ফোরাম থেকে আপনার বর্তমান আর্থিক হিসাব বিবরণী নিম্নে দেওয়া হলো:
+────────────────────────────────────────
+👤 সদস্যের নাম: ${member.name}
+🆔 সদস্য আইডি: ${member.id}
+💰 মোট সঞ্চয় জমা: ৳${member.totalSaved.toLocaleString()}
+📌 মাসিক সঞ্চয়ের হার: ৳${member.monthlySavings.toLocaleString()}
+⚠️ মোট বকেয়া: ৳${member.totalDue.toLocaleString()}
+📈 মোট লভ্যাংশ: ৳${member.profitShare.toLocaleString()}
+────────────────────────────────────────
+${customNote?.trim() ? `\n📝 বিশেষ নোটিশ / বার্তা:\n${customNote.trim()}\n` : ''}
+যে কোনো প্রশ্ন বা হিসাব সংক্রান্ত তথ্যের জন্য আমাদের সাথে যোগাযোগ করতে পারেন।
+
+ধন্যবাদান্তে,
+আল ইত্তেহাদ ফোরাম
+মোবাইল: 01616790750
+ইমেইল: alittehadforum@gmail.com`;
+
+    return `mailto:${member.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  // Generate WhatsApp link with formatted financial summary
+  const generateFinancialWhatsAppLink = (member: Member, customNote?: string) => {
+    const phone = getCleanWhatsAppPhone(member.phone);
+    const text = `আসসালামু আলাইকুম *${member.name}*,
+
+আল ইত্তেহাদ ফোরাম থেকে আপনার বর্তমান আর্থিক হিসাব বিবরণী:
+━━━━━━━━━━━━━━━━━━━━
+👤 *সদস্যের নাম:* ${member.name}
+🆔 *সদস্য আইডি:* ${member.id}
+💰 *মোট সঞ্চয় জমা:* ৳${member.totalSaved.toLocaleString()}
+📌 *মাসিক সঞ্চয় হার:* ৳${member.monthlySavings.toLocaleString()}
+⚠️ *মোট বকেয়া:* ৳${member.totalDue.toLocaleString()}
+📈 *মোট লভ্যাংশ:* ৳${member.profitShare.toLocaleString()}
+━━━━━━━━━━━━━━━━━━━━
+${customNote?.trim() ? `\n📝 *বিশেষ বার্তা:* ${customNote.trim()}\n` : ''}
+📞 যেকোনো প্রয়োজনে যোগাযোগ: 01616790750
+_ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
+
+    return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+  };
+
+  // Handle in-app message submission to Firestore
+  const handleSendMemberDirectMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!communicationMember) return;
+    setIsSendingMessage(true);
+
+    const msgId = `msg-${Date.now()}`;
+    const defaultTitle = customMessageTitle.trim() || `আর্থিক হিসাব বিবরণী ও নোটিশ`;
+    const defaultMessage = customMessageBody.trim() || `আসসালামু আলাইকুম ${communicationMember.name}, আল ইত্তেহাদ ফোরামে আপনার বর্তমান মোট সঞ্চয়: ৳${communicationMember.totalSaved.toLocaleString()} এবং মোট বকেয়া: ৳${communicationMember.totalDue.toLocaleString()}। নিয়মিত সঞ্চয় জমা দিয়ে ফোরামের আর্থিক কার্যক্রমে অংশগ্রহণের জন্য ধন্যবাদ।`;
+
+    const newDirectMsg: MemberMessage = {
+      id: msgId,
+      memberId: communicationMember.id,
+      memberName: communicationMember.name,
+      senderId: currentUser?.id || 'AM2003',
+      senderName: currentUser?.name || 'এডমিন',
+      title: defaultTitle,
+      message: defaultMessage,
+      date: new Date().toLocaleString('bn-BD'),
+      read: false,
+      totalSavedAtTime: communicationMember.totalSaved,
+      totalDueAtTime: communicationMember.totalDue,
+      channel: 'inbox'
+    };
+
+    try {
+      await setDoc(doc(firestore, 'member_messages', msgId), newDirectMsg);
+      alert(`${communicationMember.name}-এর ড্যাশবোর্ডে ব্যক্তিগত বার্তা সফলভাবে পাঠানো হয়েছে!`);
+      setCommunicationMember(null);
+      setCustomMessageTitle('');
+      setCustomMessageBody('');
+    } catch (error) {
+      console.error("Error sending in-app message:", error);
+      alert('মেসেজ পাঠাতে সমস্যা হয়েছে।');
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
 
   // Derive active member data
   const activeMember = currentUser ? allMembers.find(m => m.id === currentUser.id) : null;
@@ -960,6 +1074,91 @@ const App: React.FC = () => {
         </div>
       </div>
 
+      {/* Member's Personal Messages from Admin */}
+      {activeMember && (() => {
+        const myMessages = allMemberMessages.filter(m => m.memberId === activeMember.id);
+        if (myMessages.length === 0) return null;
+        const unreadCount = myMessages.filter(m => !m.read).length;
+
+        return (
+          <div className={`${cardClass} border-emerald-200 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-50/50 via-white to-emerald-50/20 dark:from-emerald-950/20 dark:via-slate-800/90 dark:to-emerald-950/10`}>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-emerald-600 text-white rounded-2xl shadow-md">
+                  <Mail size={22} />
+                </div>
+                <div>
+                  <h3 className={`font-black text-lg md:text-xl ${textPrimary}`}>এডমিন থেকে ব্যক্তিগত বার্তা ও হিসাব নোটিশ</h3>
+                  <p className={`text-xs ${textSecondary}`}>আপনার সঞ্চয়, বকেয়া ও বিশেষ তথ্যাবলি</p>
+                </div>
+              </div>
+              <span className="bg-emerald-600 text-white text-xs font-black px-4 py-1.5 rounded-full shadow-sm">
+                {unreadCount > 0 ? `${unreadCount}টি নতুন বার্তা` : `${myMessages.length}টি বার্তা`}
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {myMessages.map(msg => (
+                <div 
+                  key={msg.id} 
+                  className={`p-5 md:p-6 rounded-2xl md:rounded-3xl border transition-all ${
+                    msg.read 
+                      ? 'bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700' 
+                      : 'bg-white dark:bg-slate-800 border-emerald-400 dark:border-emerald-600 shadow-md ring-2 ring-emerald-500/20'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      {!msg.read && <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse"></span>}
+                      <h4 className={`font-black text-base md:text-lg ${textPrimary}`}>{msg.title}</h4>
+                    </div>
+                    <span className={`text-[11px] font-bold ${textSecondary}`}>{msg.date}</span>
+                  </div>
+
+                  <p className={`text-sm ${textSecondary} whitespace-pre-line leading-relaxed mb-4 bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-100 dark:border-slate-800/60`}>
+                    {msg.message}
+                  </p>
+
+                  {(msg.totalSavedAtTime !== undefined || msg.totalDueAtTime !== undefined) && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 text-xs font-bold mb-4 border border-emerald-100 dark:border-emerald-900/40">
+                      <div>
+                        <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-black">বার্তাকালীন সঞ্চয়:</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-black text-sm">৳{(msg.totalSavedAtTime || 0).toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-black">বার্তাকালীন বকেয়া:</span>
+                        <span className="text-rose-500 font-black text-sm">৳{(msg.totalDueAtTime || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="col-span-2 sm:col-span-1 flex items-center justify-start sm:justify-end">
+                        <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold bg-emerald-100 dark:bg-emerald-900/50 px-2.5 py-1 rounded-lg">ভেরিফাইড হিসাব</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+                    <span className="text-[11px] font-bold text-slate-400">প্রেরক: <strong className="text-emerald-600">{msg.senderName}</strong></span>
+                    {!msg.read && (
+                      <button 
+                        onClick={async () => {
+                          try {
+                            await updateDoc(doc(firestore, 'member_messages', msg.id), { read: true });
+                          } catch (err) {
+                            console.error("Error marking message read:", err);
+                          }
+                        }}
+                        className="text-emerald-600 hover:text-emerald-700 font-black flex items-center gap-1.5 py-1 px-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl hover:bg-emerald-100 transition-colors"
+                      >
+                        <CheckCircle size={14} /> পঠিত হিসেবে চিহ্নিত করুন
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className={cardClass}>
         <div className="flex justify-between items-center mb-8">
           <h3 className={`font-black text-xl flex items-center gap-2 ${textPrimary}`}><History size={20} className="text-emerald-600" /> লেনদেন ইতিহাস</h3>
@@ -1074,7 +1273,10 @@ const App: React.FC = () => {
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
       <div className={cardClass}>
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
-          <h2 className={`text-3xl font-black tracking-tight ${textPrimary}`}>সদস্য ব্যবস্থাপনা</h2>
+          <div>
+            <h2 className={`text-3xl font-black tracking-tight ${textPrimary}`}>সদস্য ব্যবস্থাপনা</h2>
+            <p className={`text-xs md:text-sm ${textSecondary} mt-1`}>সদস্যদের হিসাব বিবরণী, নোটিশ, ইমেইল, হোয়াটসঅ্যাপ ও পার্সোনাল মেসেজ পাঠান</p>
+          </div>
           <button onClick={()=>setShowAddMemberModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-2 shadow-lg transition-all active:scale-95"><UserPlus size={20}/> নতুন সদস্য</button>
         </div>
         <div className="overflow-x-auto">
@@ -1083,8 +1285,8 @@ const App: React.FC = () => {
               <tr className="border-b border-slate-100 dark:border-slate-700">
                 <th className="pb-6 text-[10px] uppercase font-black text-slate-400">সদস্য</th>
                 <th className="pb-6 text-[10px] uppercase font-black text-slate-400 text-right">সঞ্চয় (৳)</th>
-                <th className="pb-6 text-[10px] uppercase font-black text-slate-400 text-right">বাকি (৳)</th>
-                <th className="pb-6 text-[10px] uppercase font-black text-slate-400 text-right">অ্যাকশন</th>
+                <th className="pb-6 text-[10px] uppercase font-black text-slate-400 text-right">বকেয়া (৳)</th>
+                <th className="pb-6 text-[10px] uppercase font-black text-slate-400 text-right">মেসেজ ও অ্যাকশন</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
@@ -1094,15 +1296,46 @@ const App: React.FC = () => {
                     <img src={m.avatar} className="w-12 h-12 rounded-xl object-cover border-2 border-slate-100 dark:border-slate-700"/>
                     <div>
                       <div className={`font-black text-sm ${textPrimary}`}>{m.name}</div>
-                      <div className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter">{m.id}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter">{m.id}</span>
+                        {m.phone && <span className="text-[10px] text-slate-400">({m.phone})</span>}
+                      </div>
                     </div>
                   </td>
                   <td className={`py-6 text-sm font-black text-right ${textPrimary}`}>৳{m.totalSaved.toLocaleString()}</td>
                   <td className="py-6 text-sm font-black text-right text-rose-500">৳{m.totalDue.toLocaleString()}</td>
-                  <td className="py-6 text-right flex justify-end gap-3">
-                    <button onClick={()=>setShowAddPaymentModal({member:m})} title="পেমেন্ট যোগ" className="p-2 text-emerald-600 hover:scale-110 transition-transform"><Coins size={20}/></button>
-                    <button onClick={()=>setEditingMember(m)} title="এডিট" className="p-2 text-slate-400 hover:text-emerald-600 transition-colors"><Edit size={20}/></button>
-                    <button onClick={()=>deleteMember(m.id)} title="ডিলিট" className="p-2 text-rose-500 hover:scale-110 transition-transform"><Trash2 size={20}/></button>
+                  <td className="py-6 text-right">
+                    <div className="flex items-center justify-end gap-1.5 md:gap-2">
+                      {/* Communication Hub Button */}
+                      <button 
+                        onClick={() => {
+                          setCommunicationMember(m);
+                          setCustomMessageTitle(`আর্থিক হিসাব বিবরণী ও নোটিশ - ${m.name}`);
+                          setCustomMessageBody(`আসসালামু আলাইকুম ${m.name},\n\nআল ইত্তেহাদ ফোরাম থেকে আপনার বর্তমান আর্থিক হিসাব:\n• মোট সঞ্চয় জমা: ৳${m.totalSaved.toLocaleString()}\n• মাসিক সঞ্চয় হার: ৳${m.monthlySavings.toLocaleString()}\n• মোট বকেয়া: ৳${m.totalDue.toLocaleString()}\n• লভ্যাংশ: ৳${m.profitShare.toLocaleString()}\n\nঅনুগ্রহ করে বকেয়া থাকলে দ্রুত পরিশোধ করে ফোরামের কাজে সহায়তা করার জন্য অনুরোধ করা হলো।\n\nধন্যবাদ,\nআল ইত্তেহাদ ফোরাম`);
+                          setCopiedText(false);
+                        }}
+                        title="পার্সোনাল মেসেজ, ইমেইল বা হোয়াটসঅ্যাপ পাঠান" 
+                        className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                      >
+                        <Send size={14} />
+                        <span className="hidden sm:inline">মেসেজ পাঠান</span>
+                      </button>
+
+                      {/* Add Payment */}
+                      <button onClick={()=>setShowAddPaymentModal({member:m})} title="পেমেন্ট যোগ" className="p-2 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 rounded-xl hover:bg-amber-600 hover:text-white transition-all shadow-sm">
+                        <Coins size={16}/>
+                      </button>
+
+                      {/* Edit */}
+                      <button onClick={()=>setEditingMember(m)} title="এডিট" className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-xl transition-colors">
+                        <Edit size={16}/>
+                      </button>
+
+                      {/* Delete */}
+                      <button onClick={()=>deleteMember(m.id)} title="ডিলিট" className="p-2 text-rose-500 bg-rose-50 dark:bg-rose-900/30 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm">
+                        <Trash2 size={16}/>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1110,6 +1343,186 @@ const App: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Member Communication Modal */}
+      {communicationMember && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 backdrop-blur-md bg-black/40">
+          <div className="absolute inset-0" onClick={()=>setCommunicationMember(null)}></div>
+          <div className={`${isDarkMode?'bg-slate-900':'bg-white'} p-6 md:p-8 rounded-[40px] shadow-2xl w-full max-w-3xl relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 border border-slate-100 dark:border-slate-800`}>
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex items-center gap-4">
+                <img src={communicationMember.avatar} className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-500 shadow-md" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl md:text-2xl font-black text-emerald-600 tracking-tight">{communicationMember.name}</h3>
+                    <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+                      ID: {communicationMember.id}
+                    </span>
+                  </div>
+                  <p className={`text-xs ${textSecondary} mt-0.5`}>ফোন: {communicationMember.phone || 'দেওয়া নেই'} | ইমেইল: {communicationMember.email || 'দেওয়া নেই'}</p>
+                </div>
+              </div>
+              <button onClick={()=>setCommunicationMember(null)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Financial Balance Summary Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 p-4 rounded-3xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700">
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] uppercase font-black text-slate-400 block mb-0.5">মোট সঞ্চয়</span>
+                <span className="text-base font-black text-emerald-600">৳{communicationMember.totalSaved.toLocaleString()}</span>
+              </div>
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] uppercase font-black text-slate-400 block mb-0.5">মোট বকেয়া</span>
+                <span className="text-base font-black text-rose-500">৳{communicationMember.totalDue.toLocaleString()}</span>
+              </div>
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] uppercase font-black text-slate-400 block mb-0.5">মাসিক কিস্তি</span>
+                <span className={`text-base font-black ${textPrimary}`}>৳{communicationMember.monthlySavings.toLocaleString()}</span>
+              </div>
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] uppercase font-black text-slate-400 block mb-0.5">লভ্যাংশ</span>
+                <span className="text-base font-black text-blue-600">৳{communicationMember.profitShare.toLocaleString()}</span>
+              </div>
+            </div>
+
+            {/* Instant Communication Action Buttons */}
+            <div className="mb-6">
+              <label className={`block text-[11px] font-black uppercase mb-3 ${textSecondary}`}>তাত্ক্ষণিক যোগাযোগ ও সেন্ড বাটন</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Email Draft Button */}
+                <a 
+                  href={generateFinancialEmailLink(communicationMember, customMessageTitle, customMessageBody)}
+                  className="flex items-center justify-center gap-2 p-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 text-center"
+                >
+                  <Mail size={16} />
+                  <span>ইমেইল পাঠান (Mailto)</span>
+                </a>
+
+                {/* WhatsApp Button */}
+                <a 
+                  href={generateFinancialWhatsAppLink(communicationMember, customMessageBody)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 p-3.5 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-bold text-xs shadow-md transition-all active:scale-95 text-center"
+                >
+                  <MessageCircle size={16} />
+                  <span>হোয়াটসঅ্যাপে পাঠান</span>
+                </a>
+
+                {/* Copy Text Button */}
+                <button 
+                  onClick={() => {
+                    const text = `আসসালামু আলাইকুম ${communicationMember.name},\nআল ইত্তেহাদ ফোরাম থেকে আপনার আর্থিক হিসাব বিবরণী:\n• মোট সঞ্চয় জমা: ৳${communicationMember.totalSaved.toLocaleString()}\n• মাসিক সঞ্চয় হার: ৳${communicationMember.monthlySavings.toLocaleString()}\n• মোট বকেয়া: ৳${communicationMember.totalDue.toLocaleString()}\n• লভ্যাংশ: ৳${communicationMember.profitShare.toLocaleString()}\n\n${customMessageBody}`;
+                    navigator.clipboard.writeText(text);
+                    setCopiedText(true);
+                    setTimeout(() => setCopiedText(false), 3000);
+                  }}
+                  className="flex items-center justify-center gap-2 p-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs shadow-sm transition-all active:scale-95 text-center"
+                >
+                  {copiedText ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
+                  <span>{copiedText ? 'টেক্সট কপি হয়েছে!' : 'হিসাব টেক্সট কপি'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* In-App Direct Message Form */}
+            <form onSubmit={handleSendMemberDirectMessage} className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div>
+                <label className={`block text-[11px] font-black uppercase mb-1.5 ${textSecondary}`}>বার্তার শিরোনাম / বিষয়</label>
+                <input 
+                  value={customMessageTitle} 
+                  onChange={e => setCustomMessageTitle(e.target.value)} 
+                  required 
+                  className={`w-full p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none text-sm font-bold ${textPrimary}`} 
+                  placeholder="যেমন: মে মাসের সঞ্চয় ও বকেয়া নোটিশ"
+                />
+              </div>
+
+              <div>
+                <label className={`block text-[11px] font-black uppercase mb-1.5 ${textSecondary}`}>বার্তা / বিবরণ (সদস্যের ড্যাশবোর্ডে যাবে)</label>
+                <textarea 
+                  value={customMessageBody} 
+                  onChange={e => setCustomMessageBody(e.target.value)} 
+                  rows={4} 
+                  required 
+                  className={`w-full p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none text-sm leading-relaxed ${textPrimary}`} 
+                  placeholder="সদস্যের উদ্দেশ্যে কোনো বার্তা লিখুন..."
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button 
+                  type="submit" 
+                  disabled={isSendingMessage} 
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  {isSendingMessage ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <Send size={18} />
+                      <span>সদস্যের ড্যাশবোর্ডে মেসেজ পাঠান</span>
+                    </>
+                  )}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={()=>setCommunicationMember(null)}
+                  className="px-6 py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black text-sm hover:bg-slate-200 transition-colors"
+                >
+                  বন্ধ করুন
+                </button>
+              </div>
+            </form>
+
+            {/* Sent Messages History for this Member */}
+            {(() => {
+              const previousMessages = allMemberMessages.filter(m => m.memberId === communicationMember.id);
+              if (previousMessages.length === 0) return null;
+              return (
+                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+                  <h4 className={`text-sm font-black uppercase tracking-wider mb-3 ${textSecondary}`}>
+                    পূর্বে পাঠানো বার্তা ({previousMessages.length}টি)
+                  </h4>
+                  <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+                    {previousMessages.map(prev => (
+                      <div key={prev.id} className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex justify-between items-start gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-xs font-black ${textPrimary}`}>{prev.title}</span>
+                            <span className="text-[10px] text-slate-400">({prev.date})</span>
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${prev.read ? 'bg-slate-200 dark:bg-slate-700 text-slate-500' : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600'}`}>
+                              {prev.read ? 'পঠিত' : 'অপঠিত'}
+                            </span>
+                          </div>
+                          <p className={`text-xs ${textSecondary} line-clamp-1`}>{prev.message}</p>
+                        </div>
+                        <button 
+                          onClick={async () => {
+                            if (window.confirm('আপনি কি এই মেসেজটি ডিলিট করতে চান?')) {
+                              try {
+                                await deleteDoc(doc(firestore, 'member_messages', prev.id));
+                              } catch (err) {
+                                console.error("Error deleting member message:", err);
+                              }
+                            }
+                          }}
+                          className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
+                          title="ডিলিট"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
       
       {/* Payment Modal */}
       {showAddPaymentModal && (
