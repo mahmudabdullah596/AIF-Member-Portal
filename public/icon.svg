@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="ittehadGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.25" />
+    </filter>
+  </defs>
+  <!-- Background with smooth rounded corners -->
+  <rect width="512" height="512" rx="112" fill="url(#ittehadGrad)" />
+  
+  <!-- Subtle circular halo -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#34d399" stroke-width="6" stroke-opacity="0.3" stroke-dasharray="16 12" />
+  
+  <!-- Decorative community / growth icon -->
+  <g filter="url(#shadow)" fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Growth chart line trending up -->
+    <path d="M 120 360 L 210 270 L 280 320 L 392 180" />
+    <path d="M 320 180 L 392 180 L 392 252" />
+    <!-- Center unity emblem -->
+    <circle cx="256" cy="180" r="28" fill="#ffffff" stroke="none" />
+    <circle cx="160" cy="230" r="22" fill="#ffffff" fill-opacity="0.8" stroke="none" />
+    <circle cx="352" cy="230" r="22" fill="#ffffff" fill-opacity="0.8" stroke="none" />
+  </g>
+  
+  <!-- Bengalee/Arabic style badge accent -->
+  <path d="M 180 410 Q 256 440 332 410" fill="none" stroke="#a7f3d0" stroke-width="12" stroke-linecap="round" />
+</svg>
