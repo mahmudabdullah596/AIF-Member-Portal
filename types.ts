@@ -21,6 +21,7 @@ export interface Transaction {
   date: string;
   type: 'deposit' | 'due' | 'profit';
   description: string;
+  receiptNo?: string;
 }
 
 export interface Notice {

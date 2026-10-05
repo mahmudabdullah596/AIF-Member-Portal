@@ -19,6 +19,7 @@ import {
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { PWAInstallButton } from './PWAInstallButton';
 import { OfflineIndicator } from './OfflineIndicator';
+import { usePushNotification } from './usePushNotification';
 import { 
   LayoutDashboard, 
   Bell, 
@@ -87,6 +88,13 @@ const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isNoticePanelOpen, setIsNoticePanelOpen] = useState(false);
   
+  // Push Notification state
+  const pushNotification = usePushNotification();
+  const pushNotificationRef = useRef(pushNotification);
+  useEffect(() => {
+    pushNotificationRef.current = pushNotification;
+  }, [pushNotification]);
+  
   // Auth states
   const [loginId, setLoginId] = useState('');
   const [loginPass, setLoginPass] = useState('');
@@ -146,8 +154,21 @@ const App: React.FC = () => {
       setIsLoading(false);
     });
 
+    let initialNoticesLoaded = false;
     const unsubNotices = onSnapshot(query(collection(firestore, 'notices'), orderBy('date', 'desc')), (snapshot) => {
       const noticesData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Notice));
+      if (initialNoticesLoaded && !snapshot.metadata.hasPendingWrites) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const newNotice = change.doc.data() as Notice;
+            pushNotificationRef.current.sendNotification({
+              title: `📢 নতুন নোটিশ: ${newNotice.title || 'আল ইত্তেহাদ ফোরাম'}`,
+              body: newNotice.content ? newNotice.content.slice(0, 100) : 'ফোরামে একটি নতুন নোটিশ প্রকাশিত হয়েছে।'
+            });
+          }
+        });
+      }
+      initialNoticesLoaded = true;
       setAllNotices(noticesData);
     }, (error) => {
       console.error("Notices listener error:", error);
@@ -188,8 +209,21 @@ const App: React.FC = () => {
       console.error("Deposit requests listener error:", error);
     });
 
+    let initialMessagesLoaded = false;
     const unsubMemberMessages = onSnapshot(query(collection(firestore, 'member_messages'), orderBy('date', 'desc')), (snapshot) => {
       const msgData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as MemberMessage));
+      if (initialMessagesLoaded && !snapshot.metadata.hasPendingWrites) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const newMsg = change.doc.data() as MemberMessage;
+            pushNotificationRef.current.sendNotification({
+              title: `📩 নতুন বার্তা: ${newMsg.title || 'আল ইত্তেহাদ ফোরাম'}`,
+              body: newMsg.message ? newMsg.message.slice(0, 100) : `${newMsg.memberName}-এর জন্য নতুন বার্তা এসেছে।`
+            });
+          }
+        });
+      }
+      initialMessagesLoaded = true;
       setAllMemberMessages(msgData);
     }, (error) => {
       console.error("Member messages listener error:", error);
@@ -304,6 +338,10 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
 
     try {
       await setDoc(doc(firestore, 'member_messages', msgId), newDirectMsg);
+      pushNotification.sendNotification({
+        title: `📩 ${communicationMember.name}-কে বার্তা পাঠানো হয়েছে`,
+        body: defaultTitle
+      });
       alert(`${communicationMember.name}-এর ড্যাশবোর্ডে ব্যক্তিগত বার্তা সফলভাবে পাঠানো হয়েছে!`);
       setCommunicationMember(null);
       setCustomMessageTitle('');
@@ -529,6 +567,7 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
     const formData = new FormData(e.currentTarget);
     const amount = Number(formData.get('amount'));
     const description = formData.get('description') as string;
+    const receiptNo = (formData.get('receiptNo') as string)?.trim();
     const date = (formData.get('date') as string) || new Date().toLocaleDateString('bn-BD');
 
     const txId = `tx-${Date.now()}`;
@@ -538,7 +577,8 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
       amount,
       date,
       type: 'deposit',
-      description
+      description,
+      ...(receiptNo ? { receiptNo } : {})
     };
 
     try {
@@ -548,6 +588,10 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
         totalSaved: showAddPaymentModal.member.totalSaved + amount
       });
       setShowAddPaymentModal(null);
+      pushNotification.sendNotification({
+        title: '💵 নতুন পেমেন্ট রেকর্ড সম্পন্ন',
+        body: `${showAddPaymentModal.member.name}-এর হিসাবে ৳${amount.toLocaleString()} জমা হয়েছে।${receiptNo ? ` রশিদ নং: ${receiptNo}` : ''}`
+      });
       alert('পেমেন্ট সফলভাবে যোগ করা হয়েছে।');
     } catch (error) {
       alert('পেমেন্ট যোগ করতে সমস্যা হয়েছে।');
@@ -610,6 +654,11 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
     try {
       await setDoc(doc(firestore, 'notices', noticeId), newNotice);
       setShowAddNoticeModal(false);
+      pushNotification.sendNotification({
+        title: `📢 নতুন নোটিশ: ${newNotice.title}`,
+        body: newNotice.content ? newNotice.content.slice(0, 100) : 'ফোরামে একটি নতুন নোটিশ প্রকাশিত হয়েছে।'
+      });
+      alert('নোটিশ যোগ করা হয়েছে।');
     } catch (error) {
       alert('নোটিশ যোগ করতে সমস্যা হয়েছে।');
     }
@@ -826,6 +875,10 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
           totalSaved: member.totalSaved + request.amount
         });
       }
+      pushNotification.sendNotification({
+        title: '💰 পেমেন্ট রিকোয়েস্ট অনুমোদিত হয়েছে',
+        body: `${request.memberName || 'সদস্য'}-এর ৳${request.amount.toLocaleString()} জমার রিকোয়েস্ট সফলভাবে অ্যাপ্রুভ হয়েছে।`
+      });
       alert('পেমেন্টটি সফলভাবে অ্যাপ্রুভ করা হয়েছে।');
     } catch (error) {
       console.error("Error approving deposit:", error);
@@ -1181,7 +1234,15 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
               {userTransactions.map(t => (
                 <tr key={t.id}>
                   <td className={`py-4 text-sm font-medium ${textSecondary}`}>{t.date}</td>
-                  <td className={`py-4 text-sm font-bold ${textPrimary}`}>{t.description}</td>
+                  <td className={`py-4 text-sm font-bold ${textPrimary}`}>
+                    <div>{t.description}</div>
+                    {t.receiptNo && (
+                      <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md mt-1 border border-emerald-200 dark:border-emerald-800/50">
+                        <span>রশিদ নং:</span>
+                        <span>{t.receiptNo}</span>
+                      </div>
+                    )}
+                  </td>
                   <td className={`py-4 text-sm font-black text-right ${t.type === 'deposit' ? 'text-emerald-600' : 'text-blue-600'}`}>
                     ৳{t.amount.toLocaleString()}
                   </td>
@@ -1547,11 +1608,17 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
                    <input name="amount" type="number" required className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none ${textPrimary}`} placeholder="০০০" />
                  </div>
                </div>
-               <div>
-                 <label className={`block text-[10px] font-black uppercase mb-2 ${textSecondary}`}>বিবরণ</label>
-                 <input name="description" required className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none ${textPrimary}`} placeholder="যেমন: মে মাসের সঞ্চয়" />
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                 <div>
+                   <label className={`block text-[10px] font-black uppercase mb-2 ${textSecondary}`}>রশিদ নং (Receipt No - ঐচ্ছিক)</label>
+                   <input name="receiptNo" className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none ${textPrimary}`} placeholder="যেমন: R-1025" />
+                 </div>
+                 <div>
+                   <label className={`block text-[10px] font-black uppercase mb-2 ${textSecondary}`}>বিবরণ</label>
+                   <input name="description" required className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none ${textPrimary}`} placeholder="যেমন: মে মাসের সঞ্চয়" />
+                 </div>
                </div>
-               <button type="submit" className="w-full bg-emerald-600 text-white font-black py-5 rounded-3xl shadow-xl transition-all">জমা করুন</button>
+               <button type="submit" className="w-full bg-emerald-600 text-white font-black py-5 rounded-3xl shadow-xl transition-all hover:bg-emerald-700 active:scale-95">জমা করুন</button>
              </div>
           </form>
         </div>
@@ -2494,11 +2561,80 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
       <div className="p-8 border-b flex justify-between items-center bg-emerald-600 text-white">
         <div className="flex items-center gap-3">
           <Bell size={24} />
-          <h3 className="font-black uppercase tracking-widest text-sm">নোটিফিকেশন</h3>
+          <div>
+            <h3 className="font-black uppercase tracking-widest text-sm">নোটিফিকেশন সেন্টার</h3>
+            <p className="text-[10px] opacity-80 font-medium">রিয়েল-টাইম পুশ অ্যালার্ট</p>
+          </div>
         </div>
         <button onClick={() => setIsNoticePanelOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all"><X size={24}/></button>
       </div>
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Push Notification Toggle Card */}
+        <div className={`p-5 rounded-3xl border transition-all ${
+          pushNotification.isGranted 
+            ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60' 
+            : pushNotification.permission === 'denied'
+            ? 'bg-rose-50/80 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/60'
+            : 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-transparent shadow-lg'
+        }`}>
+          {pushNotification.isGranted ? (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-black text-xs">
+                  <CheckCircle size={16} />
+                  <span>পুশ নোটিফিকেশন সক্রিয়</span>
+                </div>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 mb-3">
+                নতুন নোটিশ ও আর্থিক লেনদেনের বার্তা সরাসরি আপনার ফোনে পৌঁছাবে।
+              </p>
+              <button 
+                onClick={() => {
+                  pushNotification.sendNotification({
+                    title: 'আল ইত্তেহাদ ফোরাম',
+                    body: 'এটি একটি টেস্ট নোটিফিকেশন। আপনার পুশ নোটিফিকেশন সফলভাবে চালু রয়েছে!'
+                  });
+                }}
+                className="w-full py-2 px-3 text-xs font-bold bg-white dark:bg-slate-800 hover:bg-emerald-100 dark:hover:bg-slate-700 text-emerald-700 dark:text-emerald-300 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+              >
+                <Bell size={13} /> টেস্ট নোটিফিকেশন পাঠান
+              </button>
+            </div>
+          ) : pushNotification.permission === 'denied' ? (
+            <div>
+              <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-black text-xs mb-1">
+                <AlertCircle size={16} />
+                <span>নোটিফিকেশন পারমিশন বন্ধ আছে</span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-tight">
+                ব্রাউজারের সাইট সেটিংসে গিয়ে নোটিফিকেশন পারমিশন Allow করে পেজ রিফ্রেশ করুন।
+              </p>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center gap-2 font-black text-sm mb-1">
+                <Bell size={18} className="animate-bounce" />
+                <span>পুশ নোটিফিকেশন চালু করুন</span>
+              </div>
+              <p className="text-[11px] opacity-90 mb-3 leading-tight">
+                জরুরি নোটিশ, পেমেন্ট রেকর্ড ও ব্যক্তিগত বার্তার তাৎক্ষণিক নোটিফিকেশন সরাসরি পেতে চালু করুন।
+              </p>
+              <button 
+                onClick={async () => {
+                  const granted = await pushNotification.requestPermission();
+                  if (granted) {
+                    alert('পুশ নোটিফিকেশন সফলভাবে চালু হয়েছে!');
+                  }
+                }}
+                className="w-full py-2.5 px-4 bg-white text-emerald-700 hover:bg-emerald-50 font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                <Bell size={14} /> নোটিফিকেশন চালু করুন
+              </button>
+            </div>
+          )}
+        </div>
+
         {allNotices.length > 0 ? allNotices.map(n => (
           <div key={n.id} className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all group">
             <div className="flex justify-between items-start mb-3">
@@ -2572,9 +2708,18 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
           </div>
           <div className="flex items-center gap-2.5 md:gap-4">
             <PWAInstallButton variant="header" />
-            <button onClick={() => setIsNoticePanelOpen(!isNoticePanelOpen)} className="p-2 md:p-3 bg-slate-50 dark:bg-slate-900 rounded-xl md:rounded-2xl text-slate-500 relative transition-all hover:text-emerald-600">
-              <Bell size={20} />
+            <button 
+              onClick={() => setIsNoticePanelOpen(!isNoticePanelOpen)} 
+              className={`p-2 md:p-3 rounded-xl md:rounded-2xl relative transition-all ${
+                pushNotification.isGranted
+                  ? 'bg-slate-50 dark:bg-slate-900 text-slate-500 hover:text-emerald-600'
+                  : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 ring-2 ring-emerald-500/30'
+              }`}
+              title={pushNotification.isGranted ? 'নোটিফিকেশন (পুশ নোটিফিকেশন সক্রিয়)' : 'নোটিফিকেশন দেখুন / পুশ নোটিফিকেশন চালু করুন'}
+            >
+              <Bell size={20} className={!pushNotification.isGranted ? 'animate-pulse' : ''} />
               {allNotices.length > 0 && <span className="absolute top-2 right-2 md:top-2.5 md:right-2.5 w-2.5 h-2.5 md:w-3 md:h-3 bg-rose-500 rounded-full border-2 border-white dark:border-slate-950 shadow-md"></span>}
+              {pushNotification.isGranted && <span className="absolute bottom-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900"></span>}
             </button>
             <div className="flex items-center gap-2 md:gap-3 cursor-pointer group" onClick={() => setView('profile-settings')}>
               <div className="relative">
