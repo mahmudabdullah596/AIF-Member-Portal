@@ -5,16 +5,28 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Initialize Gemini client on server with recommended telemetry header
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    },
+  },
+});
+
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
 // --- Google Sheets API ---
@@ -88,6 +100,70 @@ app.post("/api/gsheets/data", async (req, res) => {
   } catch (error: any) {
     console.error("Error fetching sheet data:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// --- Gemini Digital Assistance / AI Support ---
+app.post("/api/gemini/support", async (req, res) => {
+  try {
+    const { prompt, memberContext } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: "অনুগ্রহ করে আপনার প্রশ্নটি লিখুন।" });
+    }
+
+    // Sanitize context to prevent bloat or base64 avatar images in prompt
+    const safeContext = memberContext ? {
+      name: memberContext.name,
+      id: memberContext.id,
+      role: memberContext.role,
+      totalSaved: memberContext.totalSaved,
+      monthlySavings: memberContext.monthlySavings,
+      totalDue: memberContext.totalDue,
+      profitShare: memberContext.profitShare,
+      joiningDate: memberContext.joiningDate,
+      email: memberContext.email,
+      phone: memberContext.phone,
+    } : null;
+
+    const contextStr = safeContext ? JSON.stringify(safeContext) : "সাধারণ সদস্য বা ভিজিটর";
+    const systemInstruction = `
+      You are an AI assistant for "আল ইত্তেহাদ ফোরাম" (Al-Ittehad Forum), a trusted community savings and welfare organization of 50 members.
+      Each member saves money monthly, which is invested in halal businesses such as Super Shops, Agro/Agriculture, and Community Enterprises.
+      The current user's profile and financial context is: ${contextStr}.
+      Respond in clear, respectful, polite, and helpful Bengali language (বাংলা).
+      Explain savings, due amounts, profit share, deposit submission procedure, notice updates, and investment progress accurately based on the context.
+      Keep the formatting clean, elegant, concise, and easy to read.
+    `;
+
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          systemInstruction,
+          temperature: 0.7,
+        },
+      });
+    } catch (primaryErr) {
+      console.warn("Primary model gemini-3.5-flash failed, falling back to gemini-3.5-flash-lite:", primaryErr);
+      response = await ai.models.generateContent({
+        model: "gemini-3.5-flash-lite",
+        contents: prompt,
+        config: {
+          systemInstruction,
+          temperature: 0.7,
+        },
+      });
+    }
+
+    res.json({ text: response.text });
+  } catch (error: any) {
+    console.error("Gemini API server error:", error);
+    res.status(500).json({ 
+      error: error.message || "Failed to generate AI response",
+      text: "দুঃখিত, এই মুহূর্তে এআই সার্ভিসে সংযোগে সমস্যা হচ্ছে। অনুগ্রহ করে একটু পর আবার চেষ্টা করুন।"
+    });
   }
 });
 

@@ -88,12 +88,17 @@ const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isNoticePanelOpen, setIsNoticePanelOpen] = useState(false);
   
-  // Push Notification state
+  // Push Notification & Auth user refs for snapshot listeners
   const pushNotification = usePushNotification();
   const pushNotificationRef = useRef(pushNotification);
   useEffect(() => {
     pushNotificationRef.current = pushNotification;
   }, [pushNotification]);
+
+  const currentUserRef = useRef<Member | null>(currentUser);
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
   
   // Auth states
   const [loginId, setLoginId] = useState('');
@@ -181,8 +186,26 @@ const App: React.FC = () => {
       console.error("Businesses listener error:", error);
     });
 
+    let initialTransactionsLoaded = false;
     const unsubTransactions = onSnapshot(query(collection(firestore, 'transactions'), orderBy('date', 'desc')), (snapshot) => {
       const transactionsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Transaction));
+      if (initialTransactionsLoaded && !snapshot.metadata.hasPendingWrites) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const newTx = change.doc.data() as Transaction;
+            // Only notify the specific member whose account received the transaction
+            if (currentUserRef.current && currentUserRef.current.id === newTx.memberId) {
+              const receiptInfo = newTx.receiptNo ? ` | রশিদ নং: #${newTx.receiptNo}` : '';
+              pushNotificationRef.current.sendNotification({
+                title: '💰 নতুন জমা রেকর্ড',
+                body: `আপনার হিসাবে ৳${newTx.amount?.toLocaleString() || 0} জমা হয়েছে${receiptInfo}।`,
+                tag: `tx-${change.doc.id}`
+              });
+            }
+          }
+        });
+      }
+      initialTransactionsLoaded = true;
       setAllTransactions(transactionsData);
     }, (error) => {
       console.error("Transactions listener error:", error);
@@ -202,8 +225,42 @@ const App: React.FC = () => {
       console.error("Ads listener error:", error);
     });
 
+    let initialDepositRequestsLoaded = false;
     const unsubDepositRequests = onSnapshot(query(collection(firestore, 'deposit_requests'), orderBy('date', 'desc')), (snapshot) => {
       const depositData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as DepositRequest));
+      if (initialDepositRequestsLoaded && !snapshot.metadata.hasPendingWrites) {
+        snapshot.docChanges().forEach((change) => {
+          const req = change.doc.data() as DepositRequest;
+          if (change.type === 'added') {
+            // When a member submits a deposit request, notify Admin only
+            if (currentUserRef.current?.role === 'admin' && req.status === 'pending') {
+              pushNotificationRef.current.sendNotification({
+                title: '📥 নতুন ডিপোজিট রিকোয়েস্ট',
+                body: `${req.memberName || req.memberId}-এর ৳${req.amount?.toLocaleString() || 0} (${req.paymentMethod}) জমার রিকোয়েস্ট এসেছে।`,
+                tag: `dep-req-${change.doc.id}`
+              });
+            }
+          } else if (change.type === 'modified') {
+            // When request status changes, notify ONLY the member who submitted it
+            if (currentUserRef.current && currentUserRef.current.id === req.memberId) {
+              if (req.status === 'approved') {
+                pushNotificationRef.current.sendNotification({
+                  title: '✅ ডিপোজিট অনুমোদিত হয়েছে',
+                  body: `আপনার ৳${req.amount?.toLocaleString() || 0} (${req.paymentMethod}) জমার রিকোয়েস্ট সফলভাবে অনুমোদিত হয়েছে।`,
+                  tag: `dep-app-${change.doc.id}`
+                });
+              } else if (req.status === 'rejected') {
+                pushNotificationRef.current.sendNotification({
+                  title: '❌ ডিপোজিট রিকোয়েস্ট বাতিল',
+                  body: `আপনার ৳${req.amount?.toLocaleString() || 0} জমার রিকোয়েস্টটি গৃহীত হয়নি।`,
+                  tag: `dep-rej-${change.doc.id}`
+                });
+              }
+            }
+          }
+        });
+      }
+      initialDepositRequestsLoaded = true;
       setAllDepositRequests(depositData);
     }, (error) => {
       console.error("Deposit requests listener error:", error);
@@ -216,10 +273,14 @@ const App: React.FC = () => {
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added') {
             const newMsg = change.doc.data() as MemberMessage;
-            pushNotificationRef.current.sendNotification({
-              title: `📩 নতুন বার্তা: ${newMsg.title || 'আল ইত্তেহাদ ফোরাম'}`,
-              body: newMsg.message ? newMsg.message.slice(0, 100) : `${newMsg.memberName}-এর জন্য নতুন বার্তা এসেছে।`
-            });
+            // ONLY notify the specific member who is the intended recipient of this message
+            if (currentUserRef.current && currentUserRef.current.id === newMsg.memberId) {
+              pushNotificationRef.current.sendNotification({
+                title: `📩 নতুন বার্তা: ${newMsg.title || 'আল ইত্তেহাদ ফোরাম'}`,
+                body: newMsg.message ? newMsg.message.slice(0, 100) : 'আপনার জন্য একটি নতুন বার্তা এসেছে।',
+                tag: `msg-${change.doc.id}`
+              });
+            }
           }
         });
       }
@@ -338,10 +399,6 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
 
     try {
       await setDoc(doc(firestore, 'member_messages', msgId), newDirectMsg);
-      pushNotification.sendNotification({
-        title: `📩 ${communicationMember.name}-কে বার্তা পাঠানো হয়েছে`,
-        body: defaultTitle
-      });
       alert(`${communicationMember.name}-এর ড্যাশবোর্ডে ব্যক্তিগত বার্তা সফলভাবে পাঠানো হয়েছে!`);
       setCommunicationMember(null);
       setCustomMessageTitle('');
@@ -588,10 +645,6 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
         totalSaved: showAddPaymentModal.member.totalSaved + amount
       });
       setShowAddPaymentModal(null);
-      pushNotification.sendNotification({
-        title: '💵 নতুন পেমেন্ট রেকর্ড সম্পন্ন',
-        body: `${showAddPaymentModal.member.name}-এর হিসাবে ৳${amount.toLocaleString()} জমা হয়েছে।${receiptNo ? ` রশিদ নং: ${receiptNo}` : ''}`
-      });
       alert('পেমেন্ট সফলভাবে যোগ করা হয়েছে।');
     } catch (error) {
       alert('পেমেন্ট যোগ করতে সমস্যা হয়েছে।');
@@ -875,10 +928,6 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
           totalSaved: member.totalSaved + request.amount
         });
       }
-      pushNotification.sendNotification({
-        title: '💰 পেমেন্ট রিকোয়েস্ট অনুমোদিত হয়েছে',
-        body: `${request.memberName || 'সদস্য'}-এর ৳${request.amount.toLocaleString()} জমার রিকোয়েস্ট সফলভাবে অ্যাপ্রুভ হয়েছে।`
-      });
       alert('পেমেন্টটি সফলভাবে অ্যাপ্রুভ করা হয়েছে।');
     } catch (error) {
       console.error("Error approving deposit:", error);
@@ -898,8 +947,8 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
   };
 
   const handleSendMessage = async () => {
-    if (!chatMessage.trim()) return;
-    const msg = chatMessage;
+    if (!chatMessage.trim() || isAiLoading) return;
+    const msg = chatMessage.trim();
     setChatMessage('');
     setChatHistory(prev => [...prev, { role: 'user', text: msg }]);
     setIsAiLoading(true);
@@ -2579,27 +2628,19 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
         }`}>
           {pushNotification.isGranted ? (
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-black text-xs">
                   <CheckCircle size={16} />
                   <span>পুশ নোটিফিকেশন সক্রিয়</span>
                 </div>
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100/80 dark:bg-emerald-900/50 px-2.5 py-0.5 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  লাইভ
+                </span>
               </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 mb-3">
-                নতুন নোটিশ ও আর্থিক লেনদেনের বার্তা সরাসরি আপনার ফোনে পৌঁছাবে।
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                নতুন নোটিশ ও আপনার ব্যক্তিগত লেনদেন/বার্তার আপডেট সরাসরি আপনার ডিভাইসে পৌঁছাবে।
               </p>
-              <button 
-                onClick={() => {
-                  pushNotification.sendNotification({
-                    title: 'আল ইত্তেহাদ ফোরাম',
-                    body: 'এটি একটি টেস্ট নোটিফিকেশন। আপনার পুশ নোটিফিকেশন সফলভাবে চালু রয়েছে!'
-                  });
-                }}
-                className="w-full py-2 px-3 text-xs font-bold bg-white dark:bg-slate-800 hover:bg-emerald-100 dark:hover:bg-slate-700 text-emerald-700 dark:text-emerald-300 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
-              >
-                <Bell size={13} /> টেস্ট নোটিফিকেশন পাঠান
-              </button>
             </div>
           ) : pushNotification.permission === 'denied' ? (
             <div>
@@ -2752,6 +2793,13 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
               <button onClick={() => setIsChatOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all"><X size={24}/></button>
             </div>
             <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50/30 dark:bg-slate-900">
+              {chatHistory.length === 0 && (
+                <div className="flex justify-start">
+                  <div className="p-6 rounded-[32px] text-sm max-w-[85%] shadow-sm bg-white dark:bg-slate-800 rounded-tl-none border border-slate-100 dark:border-slate-700 text-slate-700 dark:text-slate-200 leading-relaxed">
+                    আসসালামু আলাইকুম! আল ইত্তেহাদ ফোরাম ডিজিটাল সহায়তায় আপনাকে স্বাগতম। আপনার সঞ্চয় হিসাব, মাসিক কিস্তি, জমা স্ট্যাটাস বা ফোরাম সম্পর্কিত যেকোনো তথ্য জানতে প্রশ্ন করুন।
+                  </div>
+                </div>
+              )}
               {chatHistory.map((c,i)=>(
                 <div key={i} className={`flex ${c.role==='user'?'justify-end':'justify-start'}`}>
                   <div className={`p-6 rounded-[32px] text-sm max-w-[85%] shadow-sm ${c.role==='user'?'bg-emerald-600 text-white rounded-tr-none':'bg-white dark:bg-slate-800 rounded-tl-none border border-slate-100 dark:border-slate-700'}`}>
