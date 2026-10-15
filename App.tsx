@@ -1,8 +1,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Member, AppView, Transaction, Notice, BusinessUpdate, ContactMessage, Ad, DepositRequest, MemberMessage } from './types';
-import { members as initialMembers, transactions as initialTransactions, notices as initialNotices, businesses as initialBusinesses } from './mockData';
+import { Member, AppView, Transaction, Notice, BusinessUpdate, ContactMessage, Ad, DepositRequest, MemberMessage, MoneyReceiptData, Poll } from './types';
+import { members as initialMembers, transactions as initialTransactions, notices as initialNotices, businesses as initialBusinesses, initialPolls } from './mockData';
 import { getForumSupport } from './geminiService';
+import { DigitalReceiptModal } from './DigitalReceiptModal';
+import { DecisionVoting } from './DecisionVoting';
 import { db as firestore, auth } from './firebase';
 import { 
   collection, 
@@ -20,6 +22,7 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { PWAInstallButton } from './PWAInstallButton';
 import { OfflineIndicator } from './OfflineIndicator';
 import { usePushNotification } from './usePushNotification';
+import { getMonthlySavingsNotification, getDailyNotification } from './notificationMessages';
 import { 
   LayoutDashboard, 
   Bell, 
@@ -68,7 +71,9 @@ import {
   ClipboardList,
   Copy,
   Check,
-  Share2
+  Share2,
+  FileText,
+  Vote
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -81,15 +86,17 @@ const App: React.FC = () => {
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [allDepositRequests, setAllDepositRequests] = useState<DepositRequest[]>([]);
   const [allMemberMessages, setAllMemberMessages] = useState<MemberMessage[]>([]);
+  const [allPolls, setAllPolls] = useState<Poll[]>([]);
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
   const [view, setView] = useState<AppView>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isNoticePanelOpen, setIsNoticePanelOpen] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<MoneyReceiptData | null>(null);
   
   // Push Notification & Auth user refs for snapshot listeners
-  const pushNotification = usePushNotification();
+  const pushNotification = usePushNotification(currentUser?.name);
   const pushNotificationRef = useRef(pushNotification);
   useEffect(() => {
     pushNotificationRef.current = pushNotification;
@@ -98,7 +105,14 @@ const App: React.FC = () => {
   const currentUserRef = useRef<Member | null>(currentUser);
   useEffect(() => {
     currentUserRef.current = currentUser;
-  }, [currentUser]);
+    if (currentUser?.name && pushNotification.isGranted) {
+      pushNotification.subscribeToWebPush({
+        id: currentUser.id,
+        name: currentUser.name,
+        role: currentUser.role
+      });
+    }
+  }, [currentUser, pushNotification]);
   
   // Auth states
   const [loginId, setLoginId] = useState('');
@@ -290,6 +304,42 @@ const App: React.FC = () => {
       console.error("Member messages listener error:", error);
     });
 
+    let initialPollsLoaded = false;
+    const unsubPolls = onSnapshot(query(collection(firestore, 'polls'), orderBy('createdAt', 'desc')), (snapshot) => {
+      if (snapshot.empty) {
+        // Seed initial polls
+        initialPolls.forEach(async (p) => {
+          try {
+            await setDoc(doc(firestore, 'polls', p.id), p);
+          } catch (e) {
+            console.error('Error seeding poll:', e);
+          }
+        });
+        setAllPolls(initialPolls);
+      } else {
+        const pollsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Poll));
+        if (initialPollsLoaded && !snapshot.metadata.hasPendingWrites) {
+          snapshot.docChanges().forEach((change) => {
+            if (change.type === 'added') {
+              const newPoll = change.doc.data() as Poll;
+              if (newPoll.status === 'published') {
+                pushNotificationRef.current.sendNotification({
+                  title: `🗳️ নতুন সিদ্ধান্ত ভোট: ${newPoll.title || 'অনলাইন ভোটিং'}`,
+                  body: `আল ইত্তেহাদ ফোরামে নতুন সিদ্ধান্তে আপনার মতামত ও ভোট প্রদান করুন।`,
+                  tag: `poll-${change.doc.id}`
+                });
+              }
+            }
+          });
+        }
+        setAllPolls(pollsData);
+      }
+      initialPollsLoaded = true;
+    }, (error) => {
+      console.error("Polls listener error:", error);
+      setAllPolls(initialPolls);
+    });
+
     return () => {
       unsubMembers();
       unsubNotices();
@@ -299,6 +349,7 @@ const App: React.FC = () => {
       unsubAds();
       unsubDepositRequests();
       unsubMemberMessages();
+      unsubPolls();
     };
   }, []);
 
@@ -414,6 +465,8 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
   // Derive active member data
   const activeMember = currentUser ? allMembers.find(m => m.id === currentUser.id) : null;
   const userTransactions = activeMember ? allTransactions.filter(t => t.memberId === activeMember.id) : [];
+  const currentMemberId = activeMember?.id || currentUser?.id || '';
+  const activeUnvotedPollsCount = allPolls.filter(p => p.status === 'published' && (!p.votes || !currentMemberId || !p.votes[currentMemberId])).length;
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -902,11 +955,60 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
     }
   };
 
+  const openReceiptForDeposit = (request: DepositRequest) => {
+    const member = allMembers.find(m => m.id === request.memberId);
+    const receiptNo = request.receiptNo || `AIF-${(request.date || '').replace(/[^0-9]/g, '')}-${request.trxId ? request.trxId.slice(-4).toUpperCase() : Math.floor(1000 + Math.random() * 9000)}`;
+    const approvedAt = request.approvedAt || request.date;
+    setSelectedReceipt({
+      receiptNo,
+      memberId: request.memberId,
+      memberName: request.memberName || member?.name || 'সম্মানিত সদস্য',
+      memberPhone: member?.phone || request.fromNumber,
+      amount: request.amount,
+      paymentMethod: request.paymentMethod,
+      fromNumber: request.fromNumber,
+      trxId: request.trxId,
+      date: request.date,
+      approvedAt,
+      approvedBy: request.approvedBy || 'আল ইত্তেহাদ প্রশাসন',
+      totalSavedSoFar: member?.totalSaved,
+      purpose: 'মাসিক নিয়মিত সঞ্চয় জমা'
+    });
+  };
+
+  const openReceiptForTransaction = (tx: Transaction) => {
+    const member = allMembers.find(m => m.id === tx.memberId) || currentUser;
+    const receiptNo = tx.receiptNo || `AIF-${(tx.date || '').replace(/[^0-9]/g, '')}-${tx.id.slice(-4).toUpperCase()}`;
+    setSelectedReceipt({
+      receiptNo,
+      memberId: tx.memberId,
+      memberName: member?.name || tx.memberId,
+      memberPhone: member?.phone,
+      amount: tx.amount,
+      paymentMethod: tx.paymentMethod || 'অনলাইন/ক্যাশ',
+      trxId: tx.trxId || tx.id,
+      date: tx.date,
+      approvedAt: tx.date,
+      approvedBy: 'আল ইত্তেহাদ প্রশাসন',
+      totalSavedSoFar: member?.totalSaved,
+      purpose: tx.description || 'মাসিক সঞ্চয়'
+    });
+  };
+
   const handleApproveDeposit = async (request: DepositRequest) => {
     if (!window.confirm('আপনি কি এই পেমেন্টটি অ্যাপ্রুভ করতে চান?')) return;
     try {
+      const generatedReceiptNo = request.receiptNo || `AIF-${(request.date || '').replace(/[^0-9]/g, '')}-${request.trxId ? request.trxId.slice(-4).toUpperCase() : Math.floor(1000 + Math.random() * 9000)}`;
+      const approvedAt = new Date().toLocaleString('bn-BD', { timeZone: 'Asia/Dhaka' });
+      const approvedBy = currentUser?.name || 'এডমিন';
+
       // 1. Update the request status
-      await updateDoc(doc(firestore, 'deposit_requests', request.id), { status: 'approved' });
+      await updateDoc(doc(firestore, 'deposit_requests', request.id), { 
+        status: 'approved',
+        receiptNo: generatedReceiptNo,
+        approvedAt,
+        approvedBy
+      });
       
       // 2. Create a transaction
       const txId = `tx-${Date.now()}`;
@@ -916,7 +1018,10 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
         amount: request.amount,
         date: request.date,
         type: 'deposit',
-        description: `অনলাইন পেমেন্ট (${request.paymentMethod}) - Trx: ${request.trxId}`
+        description: `অনলাইন পেমেন্ট (${request.paymentMethod}) - Trx: ${request.trxId}`,
+        receiptNo: generatedReceiptNo,
+        trxId: request.trxId,
+        paymentMethod: request.paymentMethod
       };
       await setDoc(doc(firestore, 'transactions', txId), newTx);
 
@@ -928,7 +1033,24 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
           totalSaved: member.totalSaved + request.amount
         });
       }
-      alert('পেমেন্টটি সফলভাবে অ্যাপ্রুভ করা হয়েছে।');
+
+      // 4. Automatically present the digital receipt right away for PDF download & WhatsApp sharing!
+      setSelectedReceipt({
+        receiptNo: generatedReceiptNo,
+        memberId: request.memberId,
+        memberName: request.memberName || member?.name || 'সম্মানিত সদস্য',
+        memberPhone: member?.phone || request.fromNumber,
+        amount: request.amount,
+        paymentMethod: request.paymentMethod,
+        fromNumber: request.fromNumber,
+        trxId: request.trxId,
+        date: request.date,
+        approvedAt,
+        approvedBy,
+        totalSavedSoFar: (member?.totalSaved || 0) + request.amount,
+        purpose: 'মাসিক নিয়মিত সঞ্চয় জমা'
+      });
+      
     } catch (error) {
       console.error("Error approving deposit:", error);
       alert('অ্যাপ্রুভ করতে সমস্যা হয়েছে।');
@@ -1002,6 +1124,50 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
 
         <PWAInstallButton variant="welcome" />
 
+        {/* Login-free Notification Activation Card */}
+        <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-left">
+          {pushNotification.isGranted ? (
+            <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                  <CheckCircle size={16} />
+                </div>
+                <div>
+                  <div className="text-xs font-black text-emerald-700 dark:text-emerald-400">নোটিফিকেশন সক্রিয়</div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400">মাসের ১ তারিখের সঞ্চয় নোটিশ ও দৈনিক বার্তা পাবেন</div>
+                </div>
+              </div>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            </div>
+          ) : pushNotification.permission === 'denied' ? (
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-[11px] text-slate-500 text-center">
+              ব্রাউজার সেটিংসে নোটিফিকেশন Allow করা থাকলে লগইন ছাড়াও নোটিশ পাবেন
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800/40">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 text-xs font-black text-emerald-800 dark:text-emerald-300">
+                  <Bell size={15} className="text-emerald-600 animate-bounce" />
+                  <span>নোটিফিকেশন সুবিধা</span>
+                </div>
+                <span className="text-[9px] font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-full">লগইন ছাড়াও প্রযোজ্য</span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 mb-2.5 leading-relaxed">
+                মাসের ১ তারিখে সঞ্চয় জমা দেওয়ার রিমাইন্ডার এবং প্রতিদিন সুন্দর অনুপ্রেরণামূলক বার্তা সরাসরি পেতে নোটিফিকেশন চালু রাখুন।
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  await pushNotification.requestPermission();
+                }}
+                className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                <Bell size={13} /> নোটিফিকেশন চালু করুন
+              </button>
+            </div>
+          )}
+        </div>
+
         {showForgotPasswordModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md bg-black/30">
             <div className="absolute inset-0" onClick={() => setShowForgotPasswordModal(false)}></div>
@@ -1061,6 +1227,19 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
           <button onClick={() => { setView('notices'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all ${view === 'notices' ? 'bg-emerald-600 text-white shadow-lg' : `${textSecondary} hover:bg-emerald-50 dark:hover:bg-emerald-900/10`}`}>
             <Bell size={20} /> <span className="font-bold">নোটিশ বোর্ড</span>
           </button>
+          <button 
+            onClick={() => { setView('voting'); setSidebarOpen(false); }} 
+            className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all ${view === 'voting' ? 'bg-emerald-600 text-white shadow-lg' : `${textSecondary} hover:bg-emerald-50 dark:hover:bg-emerald-900/10`}`}
+          >
+            <div className="flex items-center gap-3">
+              <Vote size={20} /> <span className="font-bold">পরামর্শ ও ভোটিং</span>
+            </div>
+            {activeUnvotedPollsCount > 0 && (
+              <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                {activeUnvotedPollsCount} নতুন
+              </span>
+            )}
+          </button>
           {currentUser?.role === 'admin' && (
             <>
               <div className="pt-8 pb-2 px-5 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">এডমিন প্যানেল</div>
@@ -1069,6 +1248,14 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
               </button>
               <button onClick={() => { setView('admin-businesses'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all ${view === 'admin-businesses' ? 'bg-emerald-600 text-white shadow-lg' : `${textSecondary} hover:bg-emerald-50 dark:hover:bg-emerald-900/10`}`}>
                 <Briefcase size={20} /> <span className="font-bold">প্রজেক্ট কন্ট্রোল</span>
+              </button>
+              <button onClick={() => { setView('admin-voting'); setSidebarOpen(false); }} className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all ${view === 'admin-voting' ? 'bg-emerald-600 text-white shadow-lg' : `${textSecondary} hover:bg-emerald-50 dark:hover:bg-emerald-900/10`}`}>
+                <div className="flex items-center gap-3">
+                  <Vote size={20} /> <span className="font-bold">ভোট ও পোল নিয়ন্ত্রণ</span>
+                </div>
+                <span className="text-[10px] font-black bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full">
+                  {allPolls.length}টি
+                </span>
               </button>
               <button onClick={() => { setView('admin-notices'); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all ${view === 'admin-notices' ? 'bg-emerald-600 text-white shadow-lg' : `${textSecondary} hover:bg-emerald-50 dark:hover:bg-emerald-900/10`}`}>
                 <Bell size={20} /> <span className="font-bold">নোটিশ নিয়ন্ত্রণ</span>
@@ -1181,6 +1368,44 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
         </div>
       </div>
 
+      {/* Active Decision Voting / Islamic Shura Spotlight Banner */}
+      {(() => {
+        const activePublishedPolls = allPolls.filter(p => p.status === 'published');
+        if (activePublishedPolls.length === 0) return null;
+        const unvotedPoll = activePublishedPolls.find(p => !p.votes || !currentMemberId || !p.votes[currentMemberId]) || activePublishedPolls[0];
+
+        return (
+          <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-r from-emerald-900 via-teal-900 to-emerald-950 text-white p-6 md:p-8 shadow-xl border border-emerald-500/30 font-kalpurush">
+            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-lg mt-1">
+                  <Vote size={26} />
+                </div>
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-amber-300 text-[10px] font-black uppercase tracking-wider mb-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span>চলমান ইসলামিক শুরা ও সিদ্ধান্ত ভোট</span>
+                  </div>
+                  <h3 className="text-lg md:text-2xl font-black mb-1.5 text-white leading-snug">
+                    {unvotedPoll.title}
+                  </h3>
+                  <p className="text-xs md:text-sm text-emerald-100/80 line-clamp-2 max-w-2xl font-light">
+                    {unvotedPoll.description || 'ফোরামের নীতি নির্ধারণ বা নতুন প্রজেক্টে আপনার সুচিন্তিত মতামত ও ভোট দিন।'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setView('voting')}
+                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-6 py-3.5 rounded-2xl text-xs md:text-sm flex items-center gap-2 shadow-xl shrink-0 active:scale-95 transition-all w-full md:w-auto justify-center"
+              >
+                <Vote size={18} /> মতামত ও ভোট দিন <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Member's Personal Messages from Admin */}
       {activeMember && (() => {
         const myMessages = allMemberMessages.filter(m => m.memberId === activeMember.id);
@@ -1285,10 +1510,23 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
                   <td className={`py-4 text-sm font-medium ${textSecondary}`}>{t.date}</td>
                   <td className={`py-4 text-sm font-bold ${textPrimary}`}>
                     <div>{t.description}</div>
-                    {t.receiptNo && (
-                      <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md mt-1 border border-emerald-200 dark:border-emerald-800/50">
-                        <span>রশিদ নং:</span>
-                        <span>{t.receiptNo}</span>
+                    {t.type === 'deposit' && (
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        {t.receiptNo && (
+                          <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/50">
+                            <span>রশিদ নং:</span>
+                            <span>{t.receiptNo}</span>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => openReceiptForTransaction(t)}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:hover:bg-emerald-900/50 px-2 py-0.5 rounded-md border border-emerald-300 dark:border-emerald-700 transition-colors"
+                          title="মানি রিসিট ডাউনলোড ও হোয়াটসঅ্যাপে শেয়ার"
+                        >
+                          <FileText size={12} />
+                          <span>রসিদ</span>
+                        </button>
                       </div>
                     )}
                   </td>
@@ -2021,6 +2259,78 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
         </div>
 
         <div className="lg:col-span-1 space-y-8">
+          {/* Notification Schedule & Settings Card */}
+          <div className={cardClass}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`font-black text-lg flex items-center gap-2 ${textPrimary}`}>
+                <Bell size={18} className="text-emerald-600" /> নোটিফিকেশন শিডিউল
+              </h3>
+              {pushNotification.isGranted ? (
+                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+                  সক্রিয়
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-950/50 px-2.5 py-1 rounded-full">
+                  বন্ধ
+                </span>
+              )}
+            </div>
+
+            <p className={`text-xs ${textSecondary} mb-4 leading-relaxed`}>
+              ফোরামের স্বয়ংক্রিয় নোটিফিকেশন ব্যবস্থা: অ্যাপে লগইন না থাকলেও ব্রাউজার নোটিফিকেশন চালু থাকলে এই নোটিশগুলো আপনার ডিভাইসে পৌঁছাবে।
+            </p>
+
+            <div className="space-y-3 mb-5">
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-black text-emerald-600 flex items-center gap-1.5">
+                    <Calendar size={13} /> প্রতি মাসের ১ তারিখ
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => pushNotification.triggerMonthlySavingsTest(activeMember?.name || currentUser?.name)}
+                    className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-100/60 dark:bg-emerald-900/40 px-2 py-0.5 rounded-md transition-all active:scale-95"
+                  >
+                    টেস্ট
+                  </button>
+                </div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                  মাসিক সঞ্চয় জমা শুরু ও রসিদ সংগ্রহের ব্যক্তিগত রিমাইন্ডার।
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-black text-emerald-600 flex items-center gap-1.5">
+                    <Clock size={13} /> প্রতিদিন একবার
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => pushNotification.triggerDailyNotificationTest(activeMember?.name || currentUser?.name)}
+                    className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-100/60 dark:bg-emerald-900/40 px-2 py-0.5 rounded-md transition-all active:scale-95"
+                  >
+                    টেস্ট
+                  </button>
+                </div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                  হালাল বরকত, সততা ও ফোরামের কল্যাণে সুন্দর ইসলামিক অনুপ্রেরণা।
+                </div>
+              </div>
+            </div>
+
+            {!pushNotification.isGranted && (
+              <button
+                type="button"
+                onClick={async () => {
+                  await pushNotification.requestPermission();
+                }}
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                <Bell size={14} /> নোটিফিকেশন চালু করুন
+              </button>
+            )}
+          </div>
+
           <div className={cardClass}>
             <h3 className={`font-black text-xl mb-6 flex items-center gap-2 ${textPrimary}`}><Bell size={20} className="text-emerald-600" /> পাসওয়ার্ড রিসেট</h3>
             <p className={`text-xs ${textSecondary} mb-6 leading-relaxed`}>
@@ -2148,8 +2458,21 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
                           <div className={`text-[10px] font-bold ${textSecondary}`}>{req.date} • {req.paymentMethod}</div>
                        </div>
                     </div>
-                    <div className={`text-[10px] font-black uppercase px-3 py-1 rounded-full ${req.status === 'approved' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'}`}>
-                       {req.status === 'approved' ? 'সফল হয়েছে' : 'পেন্ডিং'}
+                    <div className="flex items-center gap-2">
+                      <div className={`text-[10px] font-black uppercase px-3 py-1 rounded-full ${req.status === 'approved' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'}`}>
+                        {req.status === 'approved' ? 'সফল হয়েছে' : 'পেন্ডিং'}
+                      </div>
+                      {req.status === 'approved' && (
+                        <button
+                          type="button"
+                          onClick={() => openReceiptForDeposit(req)}
+                          className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 dark:hover:bg-emerald-900/50 rounded-xl text-[11px] font-black border border-emerald-300 dark:border-emerald-700 transition-all shadow-sm active:scale-95"
+                          title="ডিজিটাল মানি রিসিট ডাউনলোড ও হোয়াটসঅ্যাপে শেয়ার"
+                        >
+                          <FileText size={13} />
+                          <span>রসিদ</span>
+                        </button>
+                      )}
                     </div>
                  </div>
                ))}
@@ -2219,6 +2542,70 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
                         <CheckCircle size={48} className="opacity-20" />
                         <p className="font-black uppercase text-xs">কোনো পেন্ডিং রিকোয়েস্ট নেই</p>
                      </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Approved Deposits & Receipts Section */}
+      <div className={cardClass}>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div>
+            <h3 className={`text-xl font-black ${textPrimary} flex items-center gap-2`}>
+              <FileText size={20} className="text-emerald-600" />
+              <span>অনুমোদিত জমা ও ডিজিটাল মানি রিসিট</span>
+            </h3>
+            <p className={`text-xs ${textSecondary}`}>
+              অনুমোদিত জমার অফিশিয়াল সিলযুক্ত ডিজিটাল রসিদ দেখুন, PDF ডাউনলোড করুন বা হোয়াটসঅ্যাপে পাঠান
+            </p>
+          </div>
+          <span className="text-xs font-black bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-3 py-1.5 rounded-full">
+            মোট অনুমোদিত: {allDepositRequests.filter(r => r.status === 'approved').length}টি
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-700">
+                <th className="pb-4 text-[10px] uppercase font-black text-slate-400">সদস্য ও তারিখ</th>
+                <th className="pb-4 text-[10px] uppercase font-black text-slate-400">মাধ্যম ও TrxID</th>
+                <th className="pb-4 text-[10px] uppercase font-black text-slate-400 text-right">পরিমাণ</th>
+                <th className="pb-4 text-[10px] uppercase font-black text-slate-400 text-right">ডিজিটাল রসিদ</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
+              {allDepositRequests.filter(r => r.status === 'approved').slice(0, 15).map(req => (
+                <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-4">
+                    <div className={`font-black text-sm ${textPrimary}`}>{req.memberName}</div>
+                    <div className="text-[10px] font-bold text-slate-400">{req.date}</div>
+                  </td>
+                  <td className="py-4">
+                    <div className={`text-xs font-bold ${textPrimary}`}>{req.paymentMethod}</div>
+                    <div className="text-[10px] font-mono font-bold text-emerald-600">{req.trxId}</div>
+                  </td>
+                  <td className="py-4 text-sm font-black text-right text-emerald-600">
+                    ৳{req.amount.toLocaleString()}
+                  </td>
+                  <td className="py-4 text-right">
+                    <button
+                      onClick={() => openReceiptForDeposit(req)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-600/20 transition-all"
+                    >
+                      <FileText size={13} />
+                      <span>রসিদ ও শেয়ার</span>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {allDepositRequests.filter(r => r.status === 'approved').length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center text-slate-400 text-xs font-bold">
+                    কোনো অনুমোদিত ডিপোজিট রেকর্ড নেই
                   </td>
                 </tr>
               )}
@@ -2627,8 +3014,8 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
             : 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-transparent shadow-lg'
         }`}>
           {pushNotification.isGranted ? (
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-emerald-100 dark:border-emerald-800/40">
                 <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-black text-xs">
                   <CheckCircle size={16} />
                   <span>পুশ নোটিফিকেশন সক্রিয়</span>
@@ -2638,8 +3025,52 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
                   লাইভ
                 </span>
               </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                নতুন নোটিশ ও আপনার ব্যক্তিগত লেনদেন/বার্তার আপডেট সরাসরি আপনার ডিভাইসে পৌঁছাবে।
+
+              {/* Monthly 1st notification */}
+              <div className="p-3 rounded-2xl bg-white dark:bg-slate-900/80 border border-emerald-100 dark:border-emerald-900/30">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-emerald-700 dark:text-emerald-300">
+                    <Calendar size={14} className="text-emerald-600" />
+                    <span>মাসের ১ তারিখ: সঞ্চয় রিমাইন্ডার</span>
+                  </div>
+                  <button
+                    onClick={() => pushNotification.triggerMonthlySavingsTest(activeMember?.name || currentUser?.name)}
+                    className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 px-2 py-1 rounded-lg transition-all active:scale-95"
+                    title="নোটিফিকেশনটি আপনার স্ক্রিনে টেস্ট করুন"
+                  >
+                    টেস্ট পাঠান
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed italic bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl whitespace-pre-line">
+                  "{getMonthlySavingsNotification(activeMember?.name || currentUser?.name).body}"
+                </p>
+              </div>
+
+              {/* Daily custom notification */}
+              <div className="p-3 rounded-2xl bg-white dark:bg-slate-900/80 border border-emerald-100 dark:border-emerald-900/30">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-emerald-700 dark:text-emerald-300">
+                    <Clock size={14} className="text-emerald-600" />
+                    <span>প্রতিদিনের কাস্টম নোটিফিকেশন</span>
+                  </div>
+                  <button
+                    onClick={() => pushNotification.triggerDailyNotificationTest(activeMember?.name || currentUser?.name)}
+                    className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 px-2 py-1 rounded-lg transition-all active:scale-95"
+                    title="আজকের নোটিফিকেশনটি আপনার স্ক্রিনে টেস্ট করুন"
+                  >
+                    টেস্ট পাঠান
+                  </button>
+                </div>
+                <div className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl">
+                  <strong className="block text-emerald-600 dark:text-emerald-400 font-bold mb-0.5">
+                    {getDailyNotification(new Date(), activeMember?.name || currentUser?.name).title}
+                  </strong>
+                  {getDailyNotification(new Date(), activeMember?.name || currentUser?.name).body}
+                </div>
+              </div>
+
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                ✓ অ্যাপে লগইন না থাকলেও বা ব্যাকগ্রাউন্ডে থাকলেও ব্রাউজার নোটিফিকেশন চালু থাকলে এই নোটিফিকেশনগুলো পৌঁছে যাবে।
               </p>
             </div>
           ) : pushNotification.permission === 'denied' ? (
@@ -2702,6 +3133,18 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
     switch (view) {
       case 'dashboard': return currentUser?.role === 'admin' ? renderAdminDashboard() : renderMemberDashboard();
       case 'notices': return renderNotices();
+      case 'voting':
+      case 'admin-voting':
+        return (
+          <DecisionVoting
+            polls={allPolls}
+            currentUser={currentUser}
+            activeMember={activeMember}
+            allMembers={allMembers}
+            isDarkMode={isDarkMode}
+            onSendNotification={(payload) => pushNotification.sendNotification(payload)}
+          />
+        );
       case 'about': return renderAbout();
       case 'contact': return renderContact();
       case 'deposit': return renderDepositPage();
@@ -2716,7 +3159,18 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
     }
   };
 
-  if (!isLoggedIn) return renderWelcome();
+  if (!isLoggedIn) return (
+    <>
+      {renderWelcome()}
+      {selectedReceipt && (
+        <DigitalReceiptModal
+          isOpen={!!selectedReceipt}
+          receipt={selectedReceipt}
+          onClose={() => setSelectedReceipt(null)}
+        />
+      )}
+    </>
+  );
 
   if (isLoading) {
     return (
@@ -2740,6 +3194,7 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
               <h1 className="text-lg md:text-2xl font-black uppercase tracking-tight">
                 {view === 'dashboard' ? 'ড্যাশবোর্ড' : 
                  view === 'notices' ? 'নোটিশ বোর্ড' : 
+                 view === 'voting' || view === 'admin-voting' ? 'ইসলামিক শুরা ও ভোটিং' :
                  view === 'contact' ? 'যোগাযোগ' :
                  view === 'profile-settings' ? 'প্রোফাইল সেটিংস' :
                  view === 'admin-contact' ? 'মেসেজ বক্স' :
@@ -2817,6 +3272,14 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
         )}
       </main>
       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarChange} />
+
+      {selectedReceipt && (
+        <DigitalReceiptModal
+          isOpen={!!selectedReceipt}
+          receipt={selectedReceipt}
+          onClose={() => setSelectedReceipt(null)}
+        />
+      )}
     </div>
   );
 };

@@ -22,6 +22,8 @@ export interface Transaction {
   type: 'deposit' | 'due' | 'profit';
   description: string;
   receiptNo?: string;
+  trxId?: string;
+  paymentMethod?: string;
 }
 
 export interface Notice {
@@ -71,6 +73,25 @@ export interface DepositRequest {
   paymentMethod: string;
   date: string;
   status: 'pending' | 'approved' | 'rejected';
+  receiptNo?: string;
+  approvedAt?: string;
+  approvedBy?: string;
+}
+
+export interface MoneyReceiptData {
+  receiptNo: string;
+  memberId: string;
+  memberName: string;
+  memberPhone?: string;
+  amount: number;
+  paymentMethod: string;
+  fromNumber?: string;
+  trxId: string;
+  date: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  totalSavedSoFar?: number;
+  purpose?: string;
 }
 
 export interface MemberMessage {
@@ -88,4 +109,37 @@ export interface MemberMessage {
   channel?: 'inbox' | 'email' | 'whatsapp';
 }
 
-export type AppView = 'welcome' | 'dashboard' | 'notices' | 'about' | 'history' | 'contact' | 'profile-settings' | 'deposit' | 'admin-members' | 'admin-businesses' | 'admin-notices' | 'admin-contact' | 'admin-ads' | 'admin-deposits';
+export interface PollOption {
+  id: string;
+  text: string;
+  votesCount: number;
+}
+
+export interface PollVoteRecord {
+  memberId: string;
+  memberName: string;
+  memberAvatar?: string;
+  optionId: string;
+  optionText: string;
+  votedAt: string;
+  comment?: string;
+}
+
+export interface Poll {
+  id: string;
+  title: string;
+  description: string;
+  category: 'project' | 'policy' | 'savings' | 'welfare' | 'rules' | 'general';
+  createdAt: string;
+  createdBy: string;
+  createdByName?: string;
+  deadline?: string;
+  status: 'draft' | 'published' | 'closed';
+  options: PollOption[];
+  totalVotes: number;
+  votes: Record<string, PollVoteRecord>;
+  allowComments?: boolean;
+  pinned?: boolean;
+}
+
+export type AppView = 'welcome' | 'dashboard' | 'notices' | 'about' | 'history' | 'contact' | 'profile-settings' | 'deposit' | 'voting' | 'admin-voting' | 'admin-members' | 'admin-businesses' | 'admin-notices' | 'admin-contact' | 'admin-ads' | 'admin-deposits';

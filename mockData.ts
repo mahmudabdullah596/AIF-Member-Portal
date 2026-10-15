@@ -1,5 +1,5 @@
 
-import { Member, Transaction, Notice, BusinessUpdate } from './types';
+import { Member, Transaction, Notice, BusinessUpdate, Poll } from './types';
 
 // Generate 50 mock members
 // Added missing 'role' property to resolve TypeScript assignability error
@@ -78,3 +78,73 @@ export const businesses: BusinessUpdate[] = [
     imageUrl: 'https://picsum.photos/seed/agri/400/200'
   }
 ];
+
+export const initialPolls: Poll[] = [
+  {
+    id: 'poll-1',
+    title: 'নতুন প্রজেক্ট: আল ইত্তেহাদ এগ্রো ও ডেইরি ফার্ম বাস্তবায়ন',
+    description: 'আসসালামু আলাইকুম। ফোরামের দীর্ঘমেয়াদি আর্থিক সমৃদ্ধি ও হালাল আয়ের উৎস সম্প্রসারণের লক্ষ্যে প্রাথমিক পর্যায়ে ১ একর লিজ জমিতে ডেইরি ও এগ্রো ফার্ম প্রজেক্ট শুরুর প্রস্তাব উত্থাপন করা হয়েছে। এতে আনুমানিক প্রাথমিক বাজেট ৮ লক্ষ টাকা। সকল সম্মানিত সদস্যের মূল্যবান গণতান্ত্রিক ও ইসলামিক পরামর্শ (শুরা) আহ্বান করা হচ্ছে।',
+    category: 'project',
+    createdAt: '২০২৪-০৫-০১',
+    createdBy: 'AM2003',
+    createdByName: 'সুপার এডমিন',
+    deadline: '২০২৪-০৬-১৫',
+    status: 'published',
+    pinned: true,
+    allowComments: true,
+    totalVotes: 19,
+    options: [
+      { id: 'opt-1', text: 'হ্যাঁ, সম্পূর্ণ একমত (প্রজেক্ট দ্রুত শুরু করা হোক)', votesCount: 13 },
+      { id: 'opt-2', text: 'শর্তসাপেক্ষে অনুমোদন (বাজেট ও ঝুঁকি পুনর্বিবেচনা সাপেক্ষে)', votesCount: 4 },
+      { id: 'opt-3', text: 'না, ভিন্নমত (অন্য কোনো নিরাপদ খাতে বিনিয়োগ হোক)', votesCount: 2 }
+    ],
+    votes: {
+      'M-002': {
+        memberId: 'M-002',
+        memberName: 'সদস্য ২',
+        optionId: 'opt-1',
+        optionText: 'হ্যাঁ, সম্পূর্ণ একমত (প্রজেক্ট দ্রুত শুরু করা হোক)',
+        votedAt: '২০২৪-০৫-০২',
+        comment: 'মাশাআল্লাহ, কৃষিখাত অত্যন্ত বরকতময় ও টেকসই উদ্যোগ হবে।'
+      },
+      'M-003': {
+        memberId: 'M-003',
+        memberName: 'সদস্য ৩',
+        optionId: 'opt-2',
+        optionText: 'শর্তসাপেক্ষে অনুমোদন (বাজেট ও ঝুঁকি পুনর্বিবেচনা সাপেক্ষে)',
+        votedAt: '২০২৪-০৫-০৩',
+        comment: 'অভিজ্ঞ খামারি ও পশু চিকিৎসকের সাথে পূর্বে ফিজিবিলিটি স্টাডি করা প্রয়োজন।'
+      }
+    }
+  },
+  {
+    id: 'poll-2',
+    title: 'নীতিগত সিদ্ধান্ত: মাসিক সঞ্চয় ২০০০ টাকার পরিবর্তে ২৫০০ টাকায় উন্নীতকরণ',
+    description: 'আল ইত্তেহাদ ফোরামের কেন্দ্রীয় ফান্ড দ্রুত বৃদ্ধি করে একক উদ্যোগে বড় ব্যবসায় বিনিয়োগের সক্ষমতা অর্জনের লক্ষ্যে আগামী জুলাই ২০২৪ থেকে মাসিক সঞ্চয়ের হার ২৫০০ টাকা করার প্রস্তাব করা হলো।',
+    category: 'savings',
+    createdAt: '২০২৪-০৪-২০',
+    createdBy: 'AM2003',
+    createdByName: 'সুপার এডমিন',
+    deadline: '২০২৪-০৫-৩০',
+    status: 'published',
+    pinned: false,
+    allowComments: true,
+    totalVotes: 26,
+    options: [
+      { id: 'opt-21', text: 'হ্যাঁ, মাসিক সঞ্চয় ২৫০০ টাকা করা হোক', votesCount: 17 },
+      { id: 'opt-22', text: 'না, পূর্বের ২০০০ টাকাই বহাল রাখা হোক', votesCount: 6 },
+      { id: 'opt-23', text: 'ঐচ্ছিক করা হোক (যার সামর্থ্য আছে সে ২৫০০ দেবে)', votesCount: 3 }
+    ],
+    votes: {
+      'M-004': {
+        memberId: 'M-004',
+        memberName: 'সদস্য ৪',
+        optionId: 'opt-21',
+        optionText: 'হ্যাঁ, মাসিক সঞ্চয় ২৫০০ টাকা করা হোক',
+        votedAt: '২০২৪-০৪-২৫',
+        comment: 'ফান্ড বড় হলে আমাদের মুনাফার হারও ইনশাআল্লাহ অনেক বৃদ্ধি পাবে।'
+      }
+    }
+  }
+];
+
