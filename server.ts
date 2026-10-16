@@ -1,4 +1,5 @@
 
+import http from "http";
 import express from "express";
 import { google } from "googleapis";
 import cookieParser from "cookie-parser";
@@ -100,6 +101,7 @@ const ai = new GoogleGenAI({
 
 const app = express();
 const PORT = 3000;
+const httpServer = http.createServer(app);
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -434,7 +436,9 @@ if (process.env.NODE_ENV !== "production") {
   const vite = await createViteServer({
     server: { 
       middlewareMode: true,
-      hmr: false
+      hmr: {
+        server: httpServer,
+      },
     },
     appType: "spa",
   });
@@ -449,7 +453,7 @@ if (process.env.NODE_ENV !== "production") {
 export default app;
 
 if (process.env.NODE_ENV !== "production") {
-  app.listen(PORT, "0.0.0.0", () => {
+  httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }

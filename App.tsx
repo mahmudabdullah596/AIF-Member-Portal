@@ -1132,16 +1132,13 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
                 <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
                   <CheckCircle size={16} />
                 </div>
-                <div>
-                  <div className="text-xs font-black text-emerald-700 dark:text-emerald-400">নোটিফিকেশন সক্রিয়</div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400">মাসের ১ তারিখের সঞ্চয় নোটিশ ও দৈনিক বার্তা পাবেন</div>
-                </div>
+                <div className="text-xs font-black text-emerald-700 dark:text-emerald-400">পুশ নোটিফিকেশন সক্রিয়</div>
               </div>
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             </div>
           ) : pushNotification.permission === 'denied' ? (
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-[11px] text-slate-500 text-center">
-              ব্রাউজার সেটিংসে নোটিফিকেশন Allow করা থাকলে লগইন ছাড়াও নোটিশ পাবেন
+              ব্রাউজার সেটিংসে নোটিফিকেশন Allow করা থাকলে নোটিশ পাবেন
             </div>
           ) : (
             <div className="p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800/40">
@@ -1152,9 +1149,6 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
                 </div>
                 <span className="text-[9px] font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-full">লগইন ছাড়াও প্রযোজ্য</span>
               </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 mb-2.5 leading-relaxed">
-                মাসের ১ তারিখে সঞ্চয় জমা দেওয়ার রিমাইন্ডার এবং প্রতিদিন সুন্দর অনুপ্রেরণামূলক বার্তা সরাসরি পেতে নোটিফিকেশন চালু রাখুন।
-              </p>
               <button
                 type="button"
                 onClick={async () => {
@@ -2263,7 +2257,7 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
           <div className={cardClass}>
             <div className="flex items-center justify-between mb-4">
               <h3 className={`font-black text-lg flex items-center gap-2 ${textPrimary}`}>
-                <Bell size={18} className="text-emerald-600" /> নোটিফিকেশন শিডিউল
+                <Bell size={18} className="text-emerald-600" /> নোটিফিকেশন সেন্টার
               </h3>
               {pushNotification.isGranted ? (
                 <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
@@ -2276,31 +2270,17 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
               )}
             </div>
 
-            <p className={`text-xs ${textSecondary} mb-4 leading-relaxed`}>
-              ফোরামের স্বয়ংক্রিয় নোটিফিকেশন ব্যবস্থা: অ্যাপে লগইন না থাকলেও ব্রাউজার নোটিফিকেশন চালু থাকলে এই নোটিশগুলো আপনার ডিভাইসে পৌঁছাবে।
-            </p>
-
-            <div className="space-y-3 mb-5">
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60">
-                <div className="flex items-center gap-1.5 mb-1 text-xs font-black text-emerald-600">
-                  <Calendar size={13} /> প্রতি মাসের ১ তারিখ
+            {pushNotification.isGranted ? (
+              <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                    <CheckCircle size={16} />
+                  </div>
+                  <span className="text-sm font-black text-emerald-700 dark:text-emerald-400">পুশ নোটিফিকেশন সক্রিয়</span>
                 </div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                  মাসিক সঞ্চয় জমা শুরু ও রসিদ সংগ্রহের ব্যক্তিগত রিমাইন্ডার।
-                </div>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               </div>
-
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60">
-                <div className="flex items-center gap-1.5 mb-1 text-xs font-black text-emerald-600">
-                  <Clock size={13} /> প্রতিদিন একবার
-                </div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                  হালাল বরকত, সততা ও ফোরামের কল্যাণে সুন্দর ইসলামিক অনুপ্রেরণা।
-                </div>
-              </div>
-            </div>
-
-            {!pushNotification.isGranted && (
+            ) : (
               <button
                 type="button"
                 onClick={async () => {
@@ -2308,7 +2288,7 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
                 }}
                 className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
               >
-                <Bell size={14} /> নোটিফিকেশন চালু করুন
+                <Bell size={14} /> পুশ নোটিফিকেশন চালু করুন
               </button>
             )}
           </div>
@@ -2996,46 +2976,15 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
             : 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-transparent shadow-lg'
         }`}>
           {pushNotification.isGranted ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-emerald-100 dark:border-emerald-800/40">
-                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-black text-xs">
-                  <CheckCircle size={16} />
-                  <span>পুশ নোটিফিকেশন সক্রিয়</span>
-                </div>
-                <span className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100/80 dark:bg-emerald-900/50 px-2.5 py-0.5 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  লাইভ
-                </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5 text-emerald-700 dark:text-emerald-400 font-black text-xs md:text-sm">
+                <CheckCircle size={18} className="text-emerald-600" />
+                <span>পুশ নোটিফিকেশন সক্রিয়</span>
               </div>
-
-              {/* Monthly 1st notification */}
-              <div className="p-3 rounded-2xl bg-white dark:bg-slate-900/80 border border-emerald-100 dark:border-emerald-900/30">
-                <div className="flex items-center gap-1.5 text-xs font-black text-emerald-700 dark:text-emerald-300 mb-1.5">
-                  <Calendar size={14} className="text-emerald-600" />
-                  <span>মাসের ১ তারিখ: সঞ্চয় রিমাইন্ডার</span>
-                </div>
-                <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed italic bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl whitespace-pre-line">
-                  "{getMonthlySavingsNotification(activeMember?.name || currentUser?.name).body}"
-                </p>
-              </div>
-
-              {/* Daily custom notification */}
-              <div className="p-3 rounded-2xl bg-white dark:bg-slate-900/80 border border-emerald-100 dark:border-emerald-900/30">
-                <div className="flex items-center gap-1.5 text-xs font-black text-emerald-700 dark:text-emerald-300 mb-1.5">
-                  <Clock size={14} className="text-emerald-600" />
-                  <span>প্রতিদিনের কাস্টম নোটিফিকেশন</span>
-                </div>
-                <div className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl">
-                  <strong className="block text-emerald-600 dark:text-emerald-400 font-bold mb-0.5">
-                    {getDailyNotification(new Date(), activeMember?.name || currentUser?.name).title}
-                  </strong>
-                  {getDailyNotification(new Date(), activeMember?.name || currentUser?.name).body}
-                </div>
-              </div>
-
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                ✓ অ্যাপে লগইন না থাকলেও বা ব্যাকগ্রাউন্ডে থাকলেও ব্রাউজার নোটিফিকেশন চালু থাকলে এই নোটিফিকেশনগুলো পৌঁছে যাবে।
-              </p>
+              <span className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100/80 dark:bg-emerald-900/50 px-2.5 py-1 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                লাইভ
+              </span>
             </div>
           ) : pushNotification.permission === 'denied' ? (
             <div>
