@@ -2282,17 +2282,8 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
 
             <div className="space-y-3 mb-5">
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-black text-emerald-600 flex items-center gap-1.5">
-                    <Calendar size={13} /> প্রতি মাসের ১ তারিখ
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => pushNotification.triggerMonthlySavingsTest(activeMember?.name || currentUser?.name)}
-                    className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-100/60 dark:bg-emerald-900/40 px-2 py-0.5 rounded-md transition-all active:scale-95"
-                  >
-                    টেস্ট
-                  </button>
+                <div className="flex items-center gap-1.5 mb-1 text-xs font-black text-emerald-600">
+                  <Calendar size={13} /> প্রতি মাসের ১ তারিখ
                 </div>
                 <div className="text-[10px] text-slate-500 dark:text-slate-400">
                   মাসিক সঞ্চয় জমা শুরু ও রসিদ সংগ্রহের ব্যক্তিগত রিমাইন্ডার।
@@ -2300,17 +2291,8 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-black text-emerald-600 flex items-center gap-1.5">
-                    <Clock size={13} /> প্রতিদিন একবার
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => pushNotification.triggerDailyNotificationTest(activeMember?.name || currentUser?.name)}
-                    className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-100/60 dark:bg-emerald-900/40 px-2 py-0.5 rounded-md transition-all active:scale-95"
-                  >
-                    টেস্ট
-                  </button>
+                <div className="flex items-center gap-1.5 mb-1 text-xs font-black text-emerald-600">
+                  <Clock size={13} /> প্রতিদিন একবার
                 </div>
                 <div className="text-[10px] text-slate-500 dark:text-slate-400">
                   হালাল বরকত, সততা ও ফোরামের কল্যাণে সুন্দর ইসলামিক অনুপ্রেরণা।
@@ -3028,18 +3010,9 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
 
               {/* Monthly 1st notification */}
               <div className="p-3 rounded-2xl bg-white dark:bg-slate-900/80 border border-emerald-100 dark:border-emerald-900/30">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-1.5 text-xs font-black text-emerald-700 dark:text-emerald-300">
-                    <Calendar size={14} className="text-emerald-600" />
-                    <span>মাসের ১ তারিখ: সঞ্চয় রিমাইন্ডার</span>
-                  </div>
-                  <button
-                    onClick={() => pushNotification.triggerMonthlySavingsTest(activeMember?.name || currentUser?.name)}
-                    className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 px-2 py-1 rounded-lg transition-all active:scale-95"
-                    title="নোটিফিকেশনটি আপনার স্ক্রিনে টেস্ট করুন"
-                  >
-                    টেস্ট পাঠান
-                  </button>
+                <div className="flex items-center gap-1.5 text-xs font-black text-emerald-700 dark:text-emerald-300 mb-1.5">
+                  <Calendar size={14} className="text-emerald-600" />
+                  <span>মাসের ১ তারিখ: সঞ্চয় রিমাইন্ডার</span>
                 </div>
                 <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed italic bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl whitespace-pre-line">
                   "{getMonthlySavingsNotification(activeMember?.name || currentUser?.name).body}"
@@ -3048,18 +3021,9 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
 
               {/* Daily custom notification */}
               <div className="p-3 rounded-2xl bg-white dark:bg-slate-900/80 border border-emerald-100 dark:border-emerald-900/30">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-1.5 text-xs font-black text-emerald-700 dark:text-emerald-300">
-                    <Clock size={14} className="text-emerald-600" />
-                    <span>প্রতিদিনের কাস্টম নোটিফিকেশন</span>
-                  </div>
-                  <button
-                    onClick={() => pushNotification.triggerDailyNotificationTest(activeMember?.name || currentUser?.name)}
-                    className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 px-2 py-1 rounded-lg transition-all active:scale-95"
-                    title="আজকের নোটিফিকেশনটি আপনার স্ক্রিনে টেস্ট করুন"
-                  >
-                    টেস্ট পাঠান
-                  </button>
+                <div className="flex items-center gap-1.5 text-xs font-black text-emerald-700 dark:text-emerald-300 mb-1.5">
+                  <Clock size={14} className="text-emerald-600" />
+                  <span>প্রতিদিনের কাস্টম নোটিফিকেশন</span>
                 </div>
                 <div className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl">
                   <strong className="block text-emerald-600 dark:text-emerald-400 font-bold mb-0.5">
