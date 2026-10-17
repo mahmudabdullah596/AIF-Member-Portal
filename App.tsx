@@ -18,7 +18,7 @@ import {
   orderBy,
   onSnapshot
 } from 'firebase/firestore';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { PWAInstallButton } from './PWAInstallButton';
 import { OfflineIndicator } from './OfflineIndicator';
 import { usePushNotification } from './usePushNotification';
@@ -118,6 +118,7 @@ const App: React.FC = () => {
   const [loginId, setLoginId] = useState('');
   const [loginPass, setLoginPass] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   // AI states
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -468,32 +469,60 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
   const currentMemberId = activeMember?.id || currentUser?.id || '';
   const activeUnvotedPollsCount = allPolls.filter(p => p.status === 'published' && (!p.votes || !currentMemberId || !p.votes[currentMemberId])).length;
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginId === 'AM2003' && loginPass === 'Am1653@#') {
-      const adminUser: Member = {
-        id: 'AM2003',
-        name: 'সুপার এডমিন',
-        email: 'admin@al-ittehad.com',
-        phone: '00000',
-        joiningDate: '২০২৪-০১-০১',
-        monthlySavings: 0,
-        totalSaved: 0,
-        totalDue: 0,
-        profitShare: 0,
-        avatar: 'https://ui-avatars.com/api/?name=Admin&background=059669&color=fff',
-        role: 'admin',
-        password: 'Am1653@#'
-      };
-      setCurrentUser(adminUser);
-      setIsLoggedIn(true);
-      setView('dashboard');
-      return;
+    const inputId = loginId.trim();
+    const inputPass = loginPass;
+
+    // Check if logging in as Admin (accepts official email alittehadforum@gmail.com or ID AM2003)
+    const isAdminIdentifier = 
+      inputId.toLowerCase() === 'alittehadforum@gmail.com' || 
+      inputId.toUpperCase() === 'AM2003';
+
+    if (isAdminIdentifier) {
+      setIsLoggingIn(true);
+      try {
+        // Authenticate with Firebase Authentication using the official admin email
+        const userCredential = await signInWithEmailAndPassword(auth, 'alittehadforum@gmail.com', inputPass);
+        const fbUser = userCredential.user;
+        const adminUser: Member = {
+          id: 'AM2003',
+          name: 'সুপার এডমিন',
+          email: fbUser.email || 'alittehadforum@gmail.com',
+          phone: '01616790750',
+          joiningDate: '২০২৪-০১-০১',
+          monthlySavings: 0,
+          totalSaved: 0,
+          totalDue: 0,
+          profitShare: 0,
+          avatar: '/aif-logo.png',
+          role: 'admin'
+        };
+        setCurrentUser(adminUser);
+        setIsLoggedIn(true);
+        setView('dashboard');
+        return;
+      } catch (authErr: any) {
+        console.error("Firebase Admin Auth Error:", authErr);
+        if (authErr.code === 'auth/invalid-credential' || authErr.code === 'auth/wrong-password') {
+          alert('ভুল এডমিন পাসওয়ার্ড! দয়া করে সঠিক পাসওয়ার্ড দিন।');
+        } else if (authErr.code === 'auth/user-not-found') {
+          alert('ফায়ারবেসে alittehadforum@gmail.com ইউজার পাওয়া যায়নি। অনুগ্রহ করে Firebase Console থেকে alittehadforum@gmail.com ইমেইল দিয়ে ইউজার তৈরি করুন।');
+        } else if (authErr.code === 'auth/too-many-requests') {
+          alert('অতিরিক্ত ভুল চেষ্টার কারণে সাময়িকভাবে বন্ধ আছে। কিছুক্ষণ পর চেষ্টা করুন অথবা পাসওয়ার্ড রিসেট করুন।');
+        } else {
+          alert('এডমিন লগইন ব্যর্থ হয়েছে: ' + (authErr.message || 'পাসওয়ার্ড যাচাই করুন'));
+        }
+        return;
+      } finally {
+        setIsLoggingIn(false);
+      }
     }
-    const user = allMembers.find(m => m.id === loginId);
+
+    // Normal member login by Member ID
+    const user = allMembers.find(m => m.id.toLowerCase() === inputId.toLowerCase());
     if (user) {
-      // Check for password if it exists in the member record
-      if (user.password && user.password !== loginPass) {
+      if (user.password && user.password !== inputPass) {
         alert('ভুল পাসওয়ার্ড!');
         return;
       }
@@ -511,16 +540,19 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
     
     setIsResetting(true);
     try {
-      // Check if email exists in our members list
-      const member = allMembers.find(m => m.email === resetEmail);
-      if (!member) {
+      const targetEmail = resetEmail.trim().toLowerCase();
+      const isOfficialAdmin = targetEmail === 'alittehadforum@gmail.com' || targetEmail === 'admin@al-ittehad.com';
+      const member = allMembers.find(m => m.email.toLowerCase() === targetEmail);
+
+      if (!isOfficialAdmin && !member) {
         alert('এই ইমেইলটি আমাদের সিস্টেমে পাওয়া যায়নি!');
         setIsResetting(false);
         return;
       }
 
-      await sendPasswordResetEmail(auth, resetEmail);
-      alert('পাসওয়ার্ড রিসেট লিংক আপনার ইমেইলে পাঠানো হয়েছে। অনুগ্রহ করে চেক করুন।');
+      const emailToSend = isOfficialAdmin ? 'alittehadforum@gmail.com' : (member?.email || targetEmail);
+      await sendPasswordResetEmail(auth, emailToSend);
+      alert('পাসওয়ার্ড রিসেট লিংক আপনার ইমেইলে পাঠানো হয়েছে। ইনবক্স অথবা স্প্যাম ফোল্ডার চেক করুন।');
       setShowForgotPasswordModal(false);
       setResetEmail('');
     } catch (error: any) {
@@ -1090,8 +1122,13 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-900 p-6 md:p-12 rounded-[32px] md:rounded-[48px] shadow-2xl border border-gray-100 dark:border-slate-800 max-w-md w-full text-center relative overflow-hidden">
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-600/10 rounded-full blur-3xl"></div>
-        <div className="w-16 h-16 md:w-20 md:h-20 bg-emerald-600 rounded-2xl md:rounded-3xl mx-auto flex items-center justify-center mb-6 md:mb-8 shadow-xl">
-          <TrendingUp className="text-white w-8 h-8 md:w-10 md:h-10" />
+        <div className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-4 md:mb-5 rounded-full shadow-xl p-1 bg-white dark:bg-slate-800 ring-4 ring-emerald-500/20 flex items-center justify-center overflow-hidden">
+          <img 
+            src="/aif-logo.png" 
+            alt="আল ইত্তেহাদ ফোরাম লোগো" 
+            className="w-full h-full object-contain rounded-full"
+            referrerPolicy="no-referrer"
+          />
         </div>
         <h1 className={`text-3xl md:text-4xl font-black mb-2 tracking-tight ${textPrimary}`}>আল ইত্তেহাদ ফোরাম</h1>
         <p className={`${textSecondary} mb-8 md:mb-10 font-medium text-sm md:text-base`}>সদস্য পোর্টাল ও ম্যানেজমেন্ট সিস্টেম</p>
@@ -1108,8 +1145,21 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
             className={`w-full px-5 py-4 rounded-xl md:rounded-2xl bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-emerald-500 outline-none ${textPrimary}`}
             value={loginPass} onChange={(e) => setLoginPass(e.target.value)} required
           />
-          <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl md:rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all">
-            প্রবেশ করুন <ArrowRight size={20} />
+          <button 
+            type="submit" 
+            disabled={isLoggingIn}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl md:rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-60"
+          >
+            {isLoggingIn ? (
+              <>
+                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                যাচাই করা হচ্ছে...
+              </>
+            ) : (
+              <>
+                প্রবেশ করুন <ArrowRight size={20} />
+              </>
+            )}
           </button>
           <div className="text-center mt-4">
             <button 
@@ -1123,44 +1173,6 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
         </form>
 
         <PWAInstallButton variant="welcome" />
-
-        {/* Login-free Notification Activation Card */}
-        <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-left">
-          {pushNotification.isGranted ? (
-            <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                  <CheckCircle size={16} />
-                </div>
-                <div className="text-xs font-black text-emerald-700 dark:text-emerald-400">পুশ নোটিফিকেশন সক্রিয়</div>
-              </div>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            </div>
-          ) : pushNotification.permission === 'denied' ? (
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-[11px] text-slate-500 text-center">
-              ব্রাউজার সেটিংসে নোটিফিকেশন Allow করা থাকলে নোটিশ পাবেন
-            </div>
-          ) : (
-            <div className="p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800/40">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 text-xs font-black text-emerald-800 dark:text-emerald-300">
-                  <Bell size={15} className="text-emerald-600 animate-bounce" />
-                  <span>নোটিফিকেশন সুবিধা</span>
-                </div>
-                <span className="text-[9px] font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-full">লগইন ছাড়াও প্রযোজ্য</span>
-              </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  await pushNotification.requestPermission();
-                }}
-                className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                <Bell size={13} /> নোটিফিকেশন চালু করুন
-              </button>
-            </div>
-          )}
-        </div>
 
         {showForgotPasswordModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md bg-black/30">
@@ -1209,7 +1221,7 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
       <div className="flex flex-col h-full">
         <div className="p-8 bg-emerald-600 text-white flex items-center justify-between rounded-br-[40px] shadow-lg">
           <div className="flex items-center gap-3">
-            <TrendingUp className="w-6 h-6" />
+            <img src="/aif-logo.png" alt="লোগো" className="w-8 h-8 rounded-full bg-white object-contain p-0.5 shadow-sm" />
             <span className="text-xl font-bold tracking-tight">আল ইত্তেহাদ</span>
           </div>
           <button className="lg:hidden" onClick={() => setSidebarOpen(false)}><X /></button>

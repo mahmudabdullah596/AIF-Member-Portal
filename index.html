@@ -15,20 +15,36 @@
     <link rel="shortcut icon" href="/favicon.ico">
     <title>আল ইত্তেহাদ ফোরাম</title>
     <script>
-        // Suppress harmless Vite HMR WebSocket connection errors inside sandboxed iframe
-        window.addEventListener('error', function(event) {
-            if (event.message && (event.message.indexOf('WebSocket') !== -1 || event.message.indexOf('ws:') !== -1 || event.message.indexOf('wss:') !== -1)) {
-                event.stopImmediatePropagation();
-                event.preventDefault();
-                return true;
-            }
-        }, true);
-        window.addEventListener('unhandledrejection', function(event) {
-            if (event.reason && String(event.reason).indexOf('WebSocket') !== -1) {
-                event.stopImmediatePropagation();
-                event.preventDefault();
-            }
-        }, true);
+        // Suppress harmless Vite HMR WebSocket errors inside sandboxed preview iframe
+        (function() {
+            var origError = console.error;
+            console.error = function() {
+                for (var i = 0; i < arguments.length; i++) {
+                    var str = (arguments[i] && (arguments[i].message || arguments[i].stack || String(arguments[i]))) || '';
+                    if (str.indexOf('WebSocket') !== -1 || str.indexOf('@vite/client') !== -1) {
+                        return;
+                    }
+                }
+                return origError.apply(console, arguments);
+            };
+
+            window.addEventListener('error', function(event) {
+                var msg = event.message || (event.error && (event.error.message || event.error.stack)) || '';
+                if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('ws:') !== -1 || msg.indexOf('wss:') !== -1) {
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
+                    return true;
+                }
+            }, true);
+
+            window.addEventListener('unhandledrejection', function(event) {
+                var reason = (event.reason && (event.reason.message || String(event.reason))) || '';
+                if (reason.indexOf('WebSocket') !== -1) {
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
+                }
+            }, true);
+        })();
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
