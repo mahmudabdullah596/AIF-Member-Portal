@@ -495,7 +495,7 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
           totalSaved: 0,
           totalDue: 0,
           profitShare: 0,
-          avatar: '/aif-logo.png',
+          avatar: '/AIF-logo2.png',
           role: 'admin'
         };
         setCurrentUser(adminUser);
@@ -1124,7 +1124,7 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-600/10 rounded-full blur-3xl"></div>
         <div className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-4 md:mb-5 rounded-full shadow-xl p-1 bg-white dark:bg-slate-800 ring-4 ring-emerald-500/20 flex items-center justify-center overflow-hidden">
           <img 
-            src="/aif-logo.png" 
+            src="/AIF-logo2.png" 
             alt="আল ইত্তেহাদ ফোরাম লোগো" 
             className="w-full h-full object-contain rounded-full"
             referrerPolicy="no-referrer"
@@ -1221,7 +1221,7 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
       <div className="flex flex-col h-full">
         <div className="p-8 bg-emerald-600 text-white flex items-center justify-between rounded-br-[40px] shadow-lg">
           <div className="flex items-center gap-3">
-            <img src="/aif-logo.png" alt="লোগো" className="w-8 h-8 rounded-full bg-white object-contain p-0.5 shadow-sm" />
+            <img src="/AIF-logo2.png" alt="লোগো" className="w-8 h-8 rounded-full bg-white object-contain p-0.5 shadow-sm" />
             <span className="text-xl font-bold tracking-tight">আল ইত্তেহাদ</span>
           </div>
           <button className="lg:hidden" onClick={() => setSidebarOpen(false)}><X /></button>
