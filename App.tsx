@@ -500,6 +500,9 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
         };
         setCurrentUser(adminUser);
         setIsLoggedIn(true);
+        setIsNoticePanelOpen(false);
+        setSidebarOpen(false);
+        setIsChatOpen(false);
         setView('dashboard');
         return;
       } catch (authErr: any) {
@@ -528,6 +531,9 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
       }
       setCurrentUser(user);
       setIsLoggedIn(true);
+      setIsNoticePanelOpen(false);
+      setSidebarOpen(false);
+      setIsChatOpen(false);
       setView('dashboard');
     } else {
       alert('ভুল সদস্য আইডি বা পাসওয়ার্ড!');
@@ -2966,93 +2972,104 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
     </div>
   );
 
-  const renderNoticePanel = () => (
-    <div className={`fixed inset-y-0 right-0 z-[60] w-full md:w-96 ${isDarkMode ? 'bg-slate-900' : 'bg-white'} shadow-2xl transform transition-transform duration-500 ${isNoticePanelOpen ? 'translate-x-0' : 'translate-x-full'} border-l border-slate-100 dark:border-slate-800 flex flex-col`}>
-      <div className="p-8 border-b flex justify-between items-center bg-emerald-600 text-white">
-        <div className="flex items-center gap-3">
-          <Bell size={24} />
-          <div>
-            <h3 className="font-black uppercase tracking-widest text-sm">নোটিফিকেশন সেন্টার</h3>
-            <p className="text-[10px] opacity-80 font-medium">রিয়েল-টাইম পুশ অ্যালার্ট</p>
-          </div>
-        </div>
-        <button onClick={() => setIsNoticePanelOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all"><X size={24}/></button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* Push Notification Toggle Card */}
-        <div className={`p-5 rounded-3xl border transition-all ${
-          pushNotification.isGranted 
-            ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60' 
-            : pushNotification.permission === 'denied'
-            ? 'bg-rose-50/80 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/60'
-            : 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-transparent shadow-lg'
-        }`}>
-          {pushNotification.isGranted ? (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5 text-emerald-700 dark:text-emerald-400 font-black text-xs md:text-sm">
-                <CheckCircle size={18} className="text-emerald-600" />
-                <span>পুশ নোটিফিকেশন সক্রিয়</span>
-              </div>
-              <span className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100/80 dark:bg-emerald-900/50 px-2.5 py-1 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                লাইভ
-              </span>
-            </div>
-          ) : pushNotification.permission === 'denied' ? (
-            <div>
-              <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-black text-xs mb-1">
-                <AlertCircle size={16} />
-                <span>নোটিফিকেশন পারমিশন বন্ধ আছে</span>
-              </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-tight">
-                ব্রাউজারের সাইট সেটিংসে গিয়ে নোটিফিকেশন পারমিশন Allow করে পেজ রিফ্রেশ করুন।
-              </p>
-            </div>
-          ) : (
-            <div>
-              <div className="flex items-center gap-2 font-black text-sm mb-1">
-                <Bell size={18} className="animate-bounce" />
-                <span>পুশ নোটিফিকেশন চালু করুন</span>
-              </div>
-              <p className="text-[11px] opacity-90 mb-3 leading-tight">
-                জরুরি নোটিশ, পেমেন্ট রেকর্ড ও ব্যক্তিগত বার্তার তাৎক্ষণিক নোটিফিকেশন সরাসরি পেতে চালু করুন।
-              </p>
-              <button 
-                onClick={async () => {
-                  const granted = await pushNotification.requestPermission();
-                  if (granted) {
-                    alert('পুশ নোটিফিকেশন সফলভাবে চালু হয়েছে!');
-                  }
-                }}
-                className="w-full py-2.5 px-4 bg-white text-emerald-700 hover:bg-emerald-50 font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                <Bell size={14} /> নোটিফিকেশন চালু করুন
-              </button>
-            </div>
-          )}
-        </div>
+  const renderNoticePanel = () => {
+    if (!isNoticePanelOpen) return null;
 
-        {allNotices.length > 0 ? allNotices.map(n => (
-          <div key={n.id} className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all group">
-            <div className="flex justify-between items-start mb-3">
-              <span className="text-[10px] font-black text-emerald-600 uppercase">{n.date}</span>
-              {n.priority === 'high' && <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>}
+    return (
+      <div className="fixed inset-0 z-[60] flex justify-end">
+        {/* Backdrop overlay */}
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" 
+          onClick={() => setIsNoticePanelOpen(false)} 
+        />
+        <div className={`relative w-full md:w-96 h-full ${isDarkMode ? 'bg-slate-900' : 'bg-white'} shadow-2xl border-l border-slate-100 dark:border-slate-800 flex flex-col animate-in slide-in-from-right duration-300 z-10`}>
+          <div className="p-8 border-b flex justify-between items-center bg-emerald-600 text-white">
+            <div className="flex items-center gap-3">
+              <Bell size={24} />
+              <div>
+                <h3 className="font-black uppercase tracking-widest text-sm">নোটিফিকেশন সেন্টার</h3>
+                <p className="text-[10px] opacity-80 font-medium">রিয়েল-টাইম পুশ অ্যালার্ট</p>
+              </div>
             </div>
-            <h4 className={`font-black mb-2 ${textPrimary} group-hover:text-emerald-600 transition-colors`}>{n.title}</h4>
-            <p className={`text-xs ${textSecondary} line-clamp-2`}>{n.content}</p>
+            <button onClick={() => setIsNoticePanelOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all"><X size={24}/></button>
           </div>
-        )) : (
-          <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-50 space-y-4">
-            <Bell size={48} />
-            <p className="font-black uppercase text-xs">কোনো নোটিশ নেই</p>
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Push Notification Toggle Card */}
+            <div className={`p-5 rounded-3xl border transition-all ${
+              pushNotification.isGranted 
+                ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60' 
+                : pushNotification.permission === 'denied'
+                ? 'bg-rose-50/80 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/60'
+                : 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-transparent shadow-lg'
+            }`}>
+              {pushNotification.isGranted ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 text-emerald-700 dark:text-emerald-400 font-black text-xs md:text-sm">
+                    <CheckCircle size={18} className="text-emerald-600" />
+                    <span>পুশ নোটিফিকেশন সক্রিয়</span>
+                  </div>
+                  <span className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100/80 dark:bg-emerald-900/50 px-2.5 py-1 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    লাইভ
+                  </span>
+                </div>
+              ) : pushNotification.permission === 'denied' ? (
+                <div>
+                  <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-black text-xs mb-1">
+                    <AlertCircle size={16} />
+                    <span>নোটিফিকেশন পারমিশন বন্ধ আছে</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-tight">
+                    ব্রাউজারের সাইট সেটিংসে গিয়ে নোটিফিকেশন পারমিশন Allow করে পেজ রিফ্রেশ করুন।
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-2 font-black text-sm mb-1">
+                    <Bell size={18} className="animate-bounce" />
+                    <span>পুশ নোটিফিকেশন চালু করুন</span>
+                  </div>
+                  <p className="text-[11px] opacity-90 mb-3 leading-tight">
+                    জরুরি নোটিশ, পেমেন্ট রেকর্ড ও ব্যক্তিগত বার্তার তাৎক্ষণিক নোটিফিকেশন সরাসরি পেতে চালু করুন।
+                  </p>
+                  <button 
+                    onClick={async () => {
+                      const granted = await pushNotification.requestPermission();
+                      if (granted) {
+                        alert('পুশ নোটিফিকেশন সফলভাবে চালু হয়েছে!');
+                      }
+                    }}
+                    className="w-full py-2.5 px-4 bg-white text-emerald-700 hover:bg-emerald-50 font-black text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <Bell size={14} /> নোটিফিকেশন চালু করুন
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {allNotices.length > 0 ? allNotices.map(n => (
+              <div key={n.id} className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all group">
+                <div className="flex justify-between items-start mb-3">
+                  <span className="text-[10px] font-black text-emerald-600 uppercase">{n.date}</span>
+                  {n.priority === 'high' && <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>}
+                </div>
+                <h4 className={`font-black mb-2 ${textPrimary} group-hover:text-emerald-600 transition-colors`}>{n.title}</h4>
+                <p className={`text-xs ${textSecondary} line-clamp-2`}>{n.content}</p>
+              </div>
+            )) : (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-50 space-y-4">
+                <Bell size={48} />
+                <p className="font-black uppercase text-xs">কোনো নোটিশ নেই</p>
+              </div>
+            )}
           </div>
-        )}
+          <div className="p-6 border-t">
+            <button onClick={() => { setView('notices'); setIsNoticePanelOpen(false); }} className="w-full py-4 bg-slate-100 dark:bg-slate-800 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all">সবগুলো দেখুন</button>
+          </div>
+        </div>
       </div>
-      <div className="p-6 border-t">
-        <button onClick={() => { setView('notices'); setIsNoticePanelOpen(false); }} className="w-full py-4 bg-slate-100 dark:bg-slate-800 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all">সবগুলো দেখুন</button>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderContent = () => {
     switch (view) {
