@@ -427,50 +427,50 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
   };
 
   // Card classes
-  const cardClass = `${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'} p-6 md:p-8 rounded-[36px] border shadow-sm transition-all`;
+  const cardClass = `${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'} p-3.5 sm:p-6 md:p-8 rounded-[22px] sm:rounded-[36px] border shadow-sm transition-all w-full max-w-full overflow-hidden`;
   const textPrimary = isDarkMode ? 'text-white' : 'text-slate-900';
   const textSecondary = isDarkMode ? 'text-slate-400' : 'text-slate-500';
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 font-kalpurush">
+    <div className="space-y-5 sm:space-y-8 animate-in fade-in duration-500 font-kalpurush w-full max-w-full">
       {/* Islamic Consultation Header / Shura Banner */}
-      <div className="relative overflow-hidden rounded-[40px] bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-800 text-white p-8 md:p-12 shadow-2xl border border-emerald-600/30">
+      <div className="relative overflow-hidden rounded-[22px] sm:rounded-[36px] md:rounded-[40px] bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-800 text-white p-4 sm:p-7 md:p-12 shadow-2xl border border-emerald-600/30 w-full max-w-full">
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-white/5 blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
 
         <div className="relative z-10 max-w-4xl">
-          <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-emerald-200 text-xs font-bold uppercase tracking-wider mb-4">
-            <Sparkles size={14} className="text-amber-300" />
-            <span>ইসলামিক শুরা ও গণতান্ত্রিক পরামর্শ পরিষদ</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-emerald-200 text-[11px] sm:text-xs font-bold uppercase tracking-wider mb-3 sm:mb-4 max-w-full">
+            <Sparkles size={14} className="text-amber-300 shrink-0" />
+            <span className="truncate">ইসলামিক শুরা ও পরামর্শ পরিষদ</span>
           </div>
 
-          <h2 className="text-3xl md:text-5xl font-black mb-3 tracking-tight leading-tight">
+          <h2 className="text-xl sm:text-3xl md:text-5xl font-black mb-3 tracking-tight leading-tight">
             অনলাইন ভোটিং ও সিদ্ধান্ত পোল
           </h2>
 
-          <div className="p-4 md:p-5 rounded-2xl bg-black/20 backdrop-blur-md border border-white/10 mb-6">
-            <p className="text-xl md:text-2xl font-serif text-emerald-100 italic tracking-wide mb-1 text-center md:text-left">
+          <div className="p-3 sm:p-5 rounded-2xl bg-black/20 backdrop-blur-md border border-white/10 mb-4 sm:mb-6">
+            <p className="text-lg sm:text-xl md:text-2xl font-serif text-emerald-100 italic tracking-wide mb-1 text-center sm:text-left">
               "وَأَمْرُهُمْ شُورَىٰ بَيْنَهُمْ"
             </p>
-            <p className="text-xs md:text-sm text-emerald-100/90 leading-relaxed">
+            <p className="text-[11px] sm:text-xs md:text-sm text-emerald-100/90 leading-relaxed text-center sm:text-left">
               — "এবং তাদের কাজ পারস্পরিক পরামর্শের ভিত্তিতে সম্পন্ন হয়।" <span className="opacity-75">[সূরা আশ-শুরা: ৩৮]</span>
             </p>
           </div>
 
-          <p className="text-sm md:text-base text-emerald-50/90 leading-relaxed font-normal">
+          <p className="text-xs sm:text-sm md:text-base text-emerald-50/90 leading-relaxed font-normal">
             আল ইত্তেহাদ ফোরামের নতুন ব্যবসায়িক প্রজেক্ট গ্রহণ, নীতিগত পরিবর্তন, ফান্ড ব্যবস্থাপনা এবং গুরুত্বপূর্ণ যেকোনো সিদ্ধান্তে সম্মানিত সকল সদস্যের মতামত ও গণতান্ত্রিক ভোটাধিকার নিশ্চিত করা আমাদের মূল ভিত্তি।
           </p>
 
           {/* Quick stats & Admin action */}
-          <div className="mt-8 pt-6 border-t border-white/15 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-6 text-xs md:text-sm font-bold">
+          <div className="mt-5 sm:mt-8 pt-4 sm:pt-6 border-t border-white/15 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex flex-wrap items-center justify-around sm:justify-start gap-3 sm:gap-6 text-xs sm:text-sm font-bold">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span>চলমান ভোট: {toBanglaNum(polls.filter(p => p.status === 'published').length)}টি</span>
               </div>
               <div className="flex items-center gap-2">
                 <Users size={16} className="text-emerald-300" />
-                <span>অংশগ্রহণকারী: {toBanglaNum(allMembers.length)} জন সদস্য</span>
+                <span>অংশগ্রহণকারী: {toBanglaNum(allMembers.length)} জন</span>
               </div>
             </div>
 
@@ -480,7 +480,7 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
                   resetForm();
                   setShowCreateModal(true);
                 }}
-                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-6 py-3.5 rounded-2xl shadow-xl flex items-center gap-2.5 active:scale-95 transition-all text-sm"
+                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-5 py-3 rounded-2xl shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all text-xs sm:text-sm w-full sm:w-auto"
               >
                 <Plus size={18} /> নতুন পোল তৈরি করুন
               </button>
@@ -490,24 +490,24 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className={`${cardClass} p-4 md:p-6 space-y-4`}>
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+      <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'} p-3 sm:p-5 md:p-6 rounded-[22px] sm:rounded-[36px] border shadow-sm space-y-3 sm:space-y-4 w-full max-w-full overflow-hidden`}>
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4">
           {/* Tab buttons */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1.5 sm:pb-0 w-full scrollbar-none">
             <button
               onClick={() => setActiveTab('active')}
-              className={`px-5 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${
+              className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold shrink-0 transition-all flex items-center gap-1.5 ${
                 activeTab === 'active'
                   ? 'bg-emerald-600 text-white shadow-md'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              চলমান ভোট ({toBanglaNum(polls.filter(p => p.status === 'published').length)})
+              চলমান ({toBanglaNum(polls.filter(p => p.status === 'published').length)})
             </button>
             <button
               onClick={() => setActiveTab('all')}
-              className={`px-5 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all ${
+              className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold shrink-0 transition-all ${
                 activeTab === 'all'
                   ? 'bg-emerald-600 text-white shadow-md'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
@@ -517,47 +517,47 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('my_votes')}
-              className={`px-5 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all ${
+              className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold shrink-0 transition-all ${
                 activeTab === 'my_votes'
                   ? 'bg-emerald-600 text-white shadow-md'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
               }`}
             >
-              আমার ভোটকৃত ({toBanglaNum(polls.filter(p => p.votes && p.votes[memberId]).length)})
+              আমার ভোট ({toBanglaNum(polls.filter(p => p.votes && p.votes[memberId]).length)})
             </button>
             <button
               onClick={() => setActiveTab('closed')}
-              className={`px-5 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all ${
+              className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold shrink-0 transition-all ${
                 activeTab === 'closed'
                   ? 'bg-emerald-600 text-white shadow-md'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
               }`}
             >
-              সমাপ্ত ও ফলাফল ({toBanglaNum(polls.filter(p => p.status === 'closed').length)})
+              ফলাফল ({toBanglaNum(polls.filter(p => p.status === 'closed').length)})
             </button>
           </div>
 
           {/* Search box */}
-          <div className="relative flex-1 max-w-xs">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="relative w-full lg:max-w-xs shrink-0">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="পোল খুঁজুন..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-xs md:text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none focus:border-emerald-500 ${textPrimary}`}
+              className={`w-full pl-9 pr-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none focus:border-emerald-500 ${textPrimary}`}
             />
           </div>
         </div>
 
         {/* Categories scrollable pill list */}
-        <div className="flex items-center gap-2 overflow-x-auto pt-2 pb-1 text-xs">
-          <span className="text-slate-400 font-bold shrink-0 flex items-center gap-1">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pt-1 pb-1 text-xs w-full scrollbar-none">
+          <span className="text-slate-400 font-bold shrink-0 flex items-center gap-1 text-[11px] sm:text-xs">
             <Filter size={12} /> ক্যাটাগরি:
           </span>
           <button
             onClick={() => setSelectedCategory('all')}
-            className={`px-3 py-1.5 rounded-lg font-bold shrink-0 transition-all ${
+            className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg font-bold shrink-0 transition-all text-[11px] sm:text-xs ${
               selectedCategory === 'all'
                 ? 'bg-emerald-600 text-white'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
@@ -623,90 +623,93 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
                   poll.pinned ? 'ring-2 ring-amber-400/50 shadow-md' : ''
                 }`}
               >
-                {/* Pinned ribbon */}
-                {poll.pinned && (
-                  <div className="absolute top-0 right-8 bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-3 py-1 rounded-b-xl shadow-sm flex items-center gap-1">
-                    <Sparkles size={12} /> পিন করা প্রস্তাবনা
-                  </div>
-                )}
+                {/* Top metadata & Pinned row */}
+                <div className="space-y-2.5 mb-3 sm:mb-4">
+                  {poll.pinned && (
+                    <div>
+                      <span className="inline-flex items-center gap-1 bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-2.5 py-1 rounded-lg shadow-xs">
+                        <Sparkles size={11} /> পিন করা প্রস্তাবনা
+                      </span>
+                    </div>
+                  )}
 
-                {/* Top metadata row */}
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Status Badge */}
-                    <span
-                      className={`text-[11px] font-black px-3 py-1 rounded-full flex items-center gap-1.5 ${
-                        isDraft
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                          : isClosed
-                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300'
-                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
-                      }`}
-                    >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      {/* Status Badge */}
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          isDraft ? 'bg-amber-500' : isClosed ? 'bg-rose-500' : 'bg-emerald-500 animate-pulse'
+                        className={`text-[10px] sm:text-[11px] font-black px-2.5 sm:px-3 py-1 rounded-full flex items-center gap-1.5 ${
+                          isDraft
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                            : isClosed
+                            ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300'
+                            : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
                         }`}
-                      ></span>
-                      {isDraft ? 'খসড়া (Draft)' : isClosed ? 'ভোট সমাপ্ত ও চূড়ান্ত' : 'চলমান ভোট গ্রহণ'}
-                    </span>
-
-                    {/* Category badge */}
-                    <span
-                      className={`text-[11px] font-bold px-3 py-1 rounded-full border ${
-                        categoryConfig[poll.category]?.badge || 'bg-slate-100 text-slate-700'
-                      }`}
-                    >
-                      {categoryConfig[poll.category]?.label || 'সিদ্ধান্ত'}
-                    </span>
-
-                    {/* Voter status badge for current user */}
-                    {hasVoted && (
-                      <span className="text-[11px] font-black bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 px-3 py-1 rounded-full flex items-center gap-1">
-                        <CheckCircle2 size={13} className="text-emerald-600" /> আপনার ভোট গৃহীত হয়েছে
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            isDraft ? 'bg-amber-500' : isClosed ? 'bg-rose-500' : 'bg-emerald-500 animate-pulse'
+                          }`}
+                        ></span>
+                        {isDraft ? 'খসড়া' : isClosed ? 'ভোট সমাপ্ত' : 'চলমান ভোট'}
                       </span>
-                    )}
-                  </div>
 
-                  {/* Deadline or creation date */}
-                  <div className="flex items-center gap-3 text-xs text-slate-400 font-medium">
-                    {poll.deadline && (
-                      <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold">
-                        <Clock size={13} /> শেষ সময়: {poll.deadline}
+                      {/* Category badge */}
+                      <span
+                        className={`text-[10px] sm:text-[11px] font-bold px-2.5 sm:px-3 py-1 rounded-full border ${
+                          categoryConfig[poll.category]?.badge || 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {categoryConfig[poll.category]?.label || 'সিদ্ধান্ত'}
                       </span>
-                    )}
-                    <span className="flex items-center gap-1">
-                      <Calendar size={13} /> {poll.createdAt}
-                    </span>
+
+                      {/* Voter status badge for current user */}
+                      {hasVoted && (
+                        <span className="text-[10px] sm:text-[11px] font-black bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 px-2.5 sm:px-3 py-1 rounded-full flex items-center gap-1">
+                          <CheckCircle2 size={12} className="text-emerald-600" /> ভোট গৃহীত
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Deadline or creation date */}
+                    <div className="flex items-center gap-2.5 text-[11px] sm:text-xs text-slate-400 font-medium">
+                      {poll.deadline && (
+                        <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold">
+                          <Clock size={12} /> শেষ: {poll.deadline}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Calendar size={12} /> {poll.createdAt}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Poll Title */}
-                <h3 className={`text-xl md:text-2xl font-black mb-3 leading-snug ${textPrimary}`}>
+                <h3 className={`text-base sm:text-xl md:text-2xl font-black mb-2 sm:mb-3 leading-snug break-words ${textPrimary}`}>
                   {poll.title}
                 </h3>
 
                 {/* Poll Description */}
                 {poll.description && (
-                  <p className={`text-sm md:text-base leading-relaxed ${textSecondary} mb-6 whitespace-pre-line`}>
+                  <p className={`text-xs sm:text-sm md:text-base leading-relaxed ${textSecondary} mb-4 sm:mb-6 whitespace-pre-line break-words`}>
                     {poll.description}
                   </p>
                 )}
 
                 {/* If Closed: Winner Highlight Banner */}
                 {isClosed && winnerOption && (
-                  <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-teal-500/10 border border-amber-300 dark:border-amber-600/40 mb-6 flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-md">
-                      <Award size={20} />
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-teal-500/10 border border-amber-300 dark:border-amber-600/40 mb-4 sm:mb-6 flex items-start gap-3">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-md">
+                      <Award size={18} />
                     </div>
-                    <div>
-                      <div className="text-xs font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[10px] sm:text-xs font-black uppercase text-amber-700 dark:text-amber-400 tracking-wider">
                         চূড়ান্ত গৃহীত সিদ্ধান্ত (সর্বাধিক ভোটপ্রাপ্ত)
                       </div>
-                      <div className={`text-base md:text-lg font-black ${textPrimary} mt-0.5`}>
+                      <div className={`text-sm sm:text-base md:text-lg font-black ${textPrimary} mt-0.5 break-words`}>
                         "{winnerOption.text}"
                       </div>
-                      <div className="text-xs text-slate-500 mt-1">
+                      <div className="text-[11px] sm:text-xs text-slate-500 mt-1">
                         মোট {toBanglaNum(winnerOption.votesCount || 0)}টি ভোট ({toBanglaNum(total > 0 ? Math.round(((winnerOption.votesCount || 0) / total) * 100) : 0)}%) পেয়ে ফোরাম কর্তৃক আনুষ্ঠানিকভাবে গৃহীত।
                       </div>
                     </div>
@@ -714,7 +717,7 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
                 )}
 
                 {/* Options Section */}
-                <div className="space-y-3 mb-6">
+                <div className="space-y-2.5 mb-5 sm:mb-6">
                   {poll.options.map((option) => {
                     const count = option.votesCount || 0;
                     const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
@@ -730,8 +733,8 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
                             setSelectedOptions(prev => ({ ...prev, [poll.id]: option.id }));
                           }
                         }}
-                        className={`relative p-4 md:p-5 rounded-2xl border transition-all ${
-                          !isClosed && !isDraft ? 'cursor-pointer hover:border-emerald-500' : ''
+                        className={`relative p-3 sm:p-4 rounded-2xl border transition-all ${
+                          !isClosed && !isDraft ? 'cursor-pointer hover:border-emerald-500 active:scale-[0.99]' : ''
                         } ${
                           isUserChoice
                             ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/20'
@@ -742,59 +745,60 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
                             : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/60'
                         }`}
                       >
-                        {/* Progress bar background */}
-                        {(hasVoted || isClosed || isAdmin) && (
-                          <div
-                            className={`absolute left-0 top-0 bottom-0 rounded-2xl opacity-15 transition-all duration-700 ${
-                              isWinner ? 'bg-amber-500' : isUserChoice ? 'bg-emerald-600' : 'bg-slate-400'
-                            }`}
-                            style={{ width: `${percentage}%` }}
-                          />
-                        )}
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between gap-2.5">
+                            <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                              {/* Radio indicator */}
+                              {!isClosed && !isDraft && (
+                                <div
+                                  className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+                                    isSelected || isUserChoice
+                                      ? 'border-emerald-600 bg-emerald-600 text-white'
+                                      : 'border-slate-300 dark:border-slate-600'
+                                  }`}
+                                >
+                                  {(isSelected || isUserChoice) && <Check size={11} strokeWidth={3} />}
+                                </div>
+                              )}
 
-                        <div className="relative z-10 flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                            {/* Radio / Check indicator */}
-                            {!isClosed && !isDraft && (
-                              <div
-                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                                  isSelected || isUserChoice
-                                    ? 'border-emerald-600 bg-emerald-600 text-white'
-                                    : 'border-slate-300 dark:border-slate-600'
-                                }`}
-                              >
-                                {(isSelected || isUserChoice) && <Check size={12} strokeWidth={3} />}
-                              </div>
-                            )}
+                              {isWinner && (
+                                <Award size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                              )}
 
-                            {isWinner && (
-                              <Award size={18} className="text-amber-500 shrink-0" />
-                            )}
+                              <span className={`text-xs sm:text-sm md:text-base font-bold break-words leading-relaxed ${
+                                isUserChoice ? 'text-emerald-800 dark:text-emerald-300 font-black' : textPrimary
+                              }`}>
+                                {option.text}
+                              </span>
+                            </div>
 
-                            <span className={`text-sm md:text-base font-bold truncate ${
-                              isUserChoice ? 'text-emerald-800 dark:text-emerald-300 font-black' : textPrimary
-                            }`}>
-                              {option.text}
-                            </span>
-
+                            {/* User Choice badge */}
                             {isUserChoice && (
-                              <span className="text-[10px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full shrink-0">
+                              <span className="text-[9px] sm:text-[10px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full shrink-0">
                                 আপনার ভোট
                               </span>
                             )}
                           </div>
 
-                          {/* Vote statistics (displayed if voted, closed, or admin) */}
+                          {/* Progress bar line & stats for mobile and desktop */}
                           {(hasVoted || isClosed || isAdmin) && (
-                            <div className="flex items-center gap-3 shrink-0 text-right">
-                              <span className="text-xs font-medium text-slate-400">
-                                {toBanglaNum(count)} ভোট
-                              </span>
-                              <span className={`text-sm md:text-base font-black ${
-                                isWinner ? 'text-amber-600 dark:text-amber-400' : isUserChoice ? 'text-emerald-600 dark:text-emerald-400' : textPrimary
-                              }`}>
-                                {toBanglaNum(percentage)}%
-                              </span>
+                            <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200/50 dark:border-slate-700/50 gap-2">
+                              <div className="flex-1 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    isWinner ? 'bg-amber-500' : isUserChoice ? 'bg-emerald-600' : 'bg-slate-400'
+                                  }`}
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0 text-right font-bold text-[11px] sm:text-xs">
+                                <span className="text-slate-400">{toBanglaNum(count)} ভোট</span>
+                                <span className={`font-black ${
+                                  isWinner ? 'text-amber-600 dark:text-amber-400' : isUserChoice ? 'text-emerald-600 dark:text-emerald-400' : textPrimary
+                                }`}>
+                                  ({toBanglaNum(percentage)}%)
+                                </span>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -805,7 +809,7 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
 
                 {/* Voting Action Area (When open and user can vote) */}
                 {!isClosed && !isDraft && (
-                  <div className="p-4 md:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 mb-6 space-y-4">
+                  <div className="p-3 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 mb-5 sm:mb-6 space-y-3 sm:space-y-4">
                     {poll.allowComments !== false && (
                       <div>
                         <label className={`block text-xs font-bold mb-1.5 ${textSecondary}`}>
@@ -817,21 +821,21 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
                           placeholder="এই প্রস্তাবনার পক্ষে বা বিপক্ষে আপনার যৌক্তিক পরামর্শ লিখুন..."
                           value={voteComments[poll.id] ?? (userVote?.comment || '')}
                           onChange={(e) => setVoteComments(prev => ({ ...prev, [poll.id]: e.target.value }))}
-                          className={`w-full p-3 rounded-xl text-xs md:text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none focus:border-emerald-500 ${textPrimary}`}
+                          className={`w-full p-2.5 sm:p-3 rounded-xl text-xs sm:text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none focus:border-emerald-500 ${textPrimary}`}
                         />
                       </div>
                     )}
 
-                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                      <div className="text-xs text-slate-400 flex items-center gap-1.5">
-                        <Info size={14} className="text-emerald-600" />
-                        <span>১ সদস্য ১টি ভোট দিতে পারবেন। প্রয়োজনে শেষ সময়ের পূর্বে ভোট পরিবর্তন সম্ভব।</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                      <div className="text-[11px] sm:text-xs text-slate-400 flex items-start sm:items-center gap-1.5 leading-tight">
+                        <Info size={14} className="text-emerald-600 shrink-0 mt-0.5 sm:mt-0" />
+                        <span>১ সদস্য ১টি ভোট দিতে পারবেন। প্রয়োজনে শেষ সময়ের পূর্বে পরিবর্তন সম্ভব।</span>
                       </div>
 
                       <button
                         onClick={() => handleVote(poll)}
                         disabled={submittingPollId === poll.id || !selectedOptions[poll.id]}
-                        className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black px-6 py-3 rounded-xl shadow-md text-xs md:text-sm flex items-center gap-2 active:scale-95 transition-all"
+                        className="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black px-5 py-2.5 sm:px-6 sm:py-3 rounded-xl shadow-md text-xs sm:text-sm flex items-center gap-2 active:scale-95 transition-all"
                       >
                         {submittingPollId === poll.id ? (
                           <>অপেক্ষা করুন...</>
@@ -850,8 +854,8 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
                 )}
 
                 {/* Total Stats and Discussion Accordion */}
-                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-4 text-slate-400 font-bold">
+                <div className="pt-3 sm:pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center justify-between sm:justify-start gap-3 text-slate-400 font-bold">
                     <span className="flex items-center gap-1.5">
                       <Users size={15} className="text-emerald-600" />
                       মোট ভোট: <strong className={textPrimary}>{toBanglaNum(total)} জন</strong>
@@ -862,17 +866,17 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
                         className="text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-bold"
                       >
                         <MessageSquare size={13} />
-                        সদস্যদের পরামর্শ ({toBanglaNum((Object.values(poll.votes || {}) as PollVoteRecord[]).filter(v => !!v.comment).length)}টি)
+                        পরামর্শ ({toBanglaNum((Object.values(poll.votes || {}) as PollVoteRecord[]).filter(v => !!v.comment).length)})
                         {expandedComments[poll.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                       </button>
                     )}
                   </div>
 
                   {/* Share & Copy Buttons */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
                     <button
                       onClick={() => copyPollResults(poll)}
-                      className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 text-xs font-bold flex items-center gap-1 transition-all"
+                      className="flex-1 sm:flex-none justify-center px-3 py-2 sm:py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 text-xs font-bold flex items-center gap-1 transition-all"
                       title="ফলাফল কপি করুন"
                     >
                       {copiedPollId === poll.id ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
@@ -883,7 +887,7 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
                       href={getWhatsAppShareUrl(poll)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 text-xs font-bold flex items-center gap-1.5 transition-all"
+                      className="flex-1 sm:flex-none justify-center px-3 py-2 sm:py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 text-xs font-bold flex items-center gap-1.5 transition-all"
                       title="হোয়াটসঅ্যাপে শেয়ার করুন"
                     >
                       <Share2 size={14} />
@@ -898,7 +902,7 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
                     <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">
                       সদস্যদের মতামত ও পরামর্শ:
                     </h4>
-                    <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
+                    <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
                       {(Object.values(poll.votes || {}) as PollVoteRecord[])
                         .filter(v => !!v.comment)
                         .map((v, idx) => (
@@ -914,7 +918,7 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
                                 {v.optionText}
                               </span>
                             </div>
-                            <p className={`${textSecondary} leading-relaxed italic`}>
+                            <p className={`${textSecondary} leading-relaxed italic break-words`}>
                               "{v.comment}"
                             </p>
                             <div className="text-[10px] text-slate-400 mt-1">{v.votedAt}</div>
@@ -924,84 +928,88 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
                   </div>
                 )}
 
-                {/* ADMIN CONTROL PANEL BAR (এডমিন এটা নিয়ন্ত্রণ করবে - কখন প্রকাশ করবে কখন ক্লোজ করবে সেটা) */}
+                {/* ADMIN CONTROL PANEL BAR (No negative margins, perfectly contained) */}
                 {isAdmin && (
-                  <div className="mt-6 pt-5 border-t-2 border-dashed border-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/20 -mx-6 -mb-6 p-6 flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck size={18} className="text-emerald-600" />
-                      <span className="text-xs font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
-                        এডমিন নিয়ন্ত্রণ প্যানেল
-                      </span>
+                  <div className="mt-5 pt-4 border-t-2 border-dashed border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/30 rounded-2xl p-3 sm:p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <ShieldCheck size={16} className="text-emerald-600" />
+                        <span className="text-[11px] sm:text-xs font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+                          এডমিন প্যানেল
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {/* Pin button */}
+                        <button
+                          onClick={() => handleTogglePin(poll)}
+                          className={`p-2 rounded-xl border text-xs font-bold transition-all ${
+                            poll.pinned
+                              ? 'bg-amber-100 text-amber-700 border-amber-300'
+                              : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
+                          }`}
+                          title={poll.pinned ? 'পিন বাতিল করুন' : 'উপরে পিন করুন'}
+                        >
+                          <Sparkles size={14} />
+                        </button>
+
+                        {/* Edit button */}
+                        <button
+                          onClick={() => openEditModal(poll)}
+                          className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-emerald-600 border border-slate-200 dark:border-slate-700 rounded-xl transition-all"
+                          title="এডিট করুন"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+
+                        {/* Delete button */}
+                        <button
+                          onClick={() => handleDeletePoll(poll)}
+                          className="p-2 bg-white dark:bg-slate-800 text-rose-500 hover:bg-rose-50 border border-slate-200 dark:border-slate-700 rounded-xl transition-all"
+                          title="ডিলিট করুন"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {/* Publish / Close / Reopen button */}
                       {isDraft && (
                         <button
                           onClick={() => handleStatusChange(poll, 'published')}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
                         >
-                          <Play size={14} /> প্রকাশ করুন (Publish)
+                          <Play size={13} /> প্রকাশ করুন (Publish)
                         </button>
                       )}
 
                       {!isClosed && !isDraft && (
                         <button
                           onClick={() => handleStatusChange(poll, 'closed')}
-                          className="bg-rose-600 hover:bg-rose-700 text-white font-black px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                          className="w-full bg-rose-600 hover:bg-rose-700 text-white font-black py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
                           title="ভোট সমাপ্ত করুন ও ফলাফল চূড়ান্ত করুন"
                         >
-                          <Square size={14} /> ভোট সমাপ্ত করুন (Close)
+                          <Square size={13} /> ভোট সমাপ্ত করুন (Close)
                         </button>
                       )}
 
                       {isClosed && (
                         <button
                           onClick={() => handleStatusChange(poll, 'published')}
-                          className="bg-amber-600 hover:bg-amber-700 text-white font-black px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                          className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
                           title="পোল পুনরায় উন্মুক্ত করুন"
                         >
-                          <RotateCcw size={14} /> পুনরায় চালু করুন (Reopen)
+                          <RotateCcw size={13} /> পুনরায় চালু করুন (Reopen)
                         </button>
                       )}
 
                       {/* Voter List Audit Button */}
                       <button
                         onClick={() => setAuditPoll(poll)}
-                        className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-emerald-500 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all"
+                        className="w-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-emerald-500 font-bold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all"
                       >
-                        <Users size={14} /> অডিট ও ভোটার তালিকা
-                      </button>
-
-                      {/* Pin button */}
-                      <button
-                        onClick={() => handleTogglePin(poll)}
-                        className={`p-2 rounded-xl border text-xs font-bold transition-all ${
-                          poll.pinned
-                            ? 'bg-amber-100 text-amber-700 border-amber-300'
-                            : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
-                        }`}
-                        title={poll.pinned ? 'পিন বাতিল করুন' : 'উপরে পিন করুন'}
-                      >
-                        <Sparkles size={16} />
-                      </button>
-
-                      {/* Edit button */}
-                      <button
-                        onClick={() => openEditModal(poll)}
-                        className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-emerald-600 border border-slate-200 dark:border-slate-700 rounded-xl transition-all"
-                        title="এডিট করুন"
-                      >
-                        <Edit3 size={16} />
-                      </button>
-
-                      {/* Delete button */}
-                      <button
-                        onClick={() => handleDeletePoll(poll)}
-                        className="p-2 bg-white dark:bg-slate-800 text-rose-500 hover:bg-rose-50 border border-slate-200 dark:border-slate-700 rounded-xl transition-all"
-                        title="ডিলিট করুন"
-                      >
-                        <Trash2 size={16} />
+                        <Users size={13} /> ভোটার তালিকা ও নিরীক্ষা
                       </button>
                     </div>
                   </div>
@@ -1018,11 +1026,11 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
           <div className="absolute inset-0" onClick={() => setShowCreateModal(false)}></div>
           <form
             onSubmit={handleSavePoll}
-            className={`${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} p-6 md:p-8 rounded-[40px] shadow-2xl w-full max-w-2xl relative border max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 font-kalpurush`}
+            className={`${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} p-4 sm:p-6 md:p-8 rounded-[28px] sm:rounded-[40px] shadow-2xl w-full max-w-2xl relative border max-h-[92vh] overflow-y-auto animate-in zoom-in-95 duration-200 font-kalpurush`}
           >
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
+            <div className="flex items-center justify-between mb-5 sm:mb-6 pb-3 sm:pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
                   <Vote size={22} />
                 </div>
                 <div>
@@ -1224,11 +1232,11 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
       {auditPoll && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 backdrop-blur-md bg-black/40">
           <div className="absolute inset-0" onClick={() => setAuditPoll(null)}></div>
-          <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} p-6 md:p-8 rounded-[40px] shadow-2xl w-full max-w-3xl relative border max-h-[85vh] flex flex-col font-kalpurush`}>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className={`${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} p-4 sm:p-6 md:p-8 rounded-[28px] sm:rounded-[40px] shadow-2xl w-full max-w-3xl relative border max-h-[88vh] flex flex-col font-kalpurush`}>
+            <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <h3 className={`text-xl font-black ${textPrimary}`}>ভোটার তালিকা ও মতামত নিরীক্ষা</h3>
-                <p className="text-xs text-slate-400 truncate max-w-md">{auditPoll.title}</p>
+                <h3 className={`text-lg sm:text-xl font-black ${textPrimary}`}>ভোটার তালিকা ও মতামত নিরীক্ষা</h3>
+                <p className="text-xs text-slate-400 truncate max-w-xs sm:max-w-md">{auditPoll.title}</p>
               </div>
               <button onClick={() => setAuditPoll(null)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
                 <X size={20} />
@@ -1236,23 +1244,23 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
             </div>
 
             <div className="py-4 flex-1 overflow-y-auto space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
-                <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100">
-                  <div className="text-xl font-black text-emerald-600">{toBanglaNum(auditPoll.totalVotes || 0)}</div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 text-center">
+                <div className="p-2.5 sm:p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100">
+                  <div className="text-lg sm:text-xl font-black text-emerald-600">{toBanglaNum(auditPoll.totalVotes || 0)}</div>
                   <div className="text-[10px] text-slate-400 font-bold uppercase">মোট ভোটার</div>
                 </div>
-                <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100">
-                  <div className="text-xl font-black text-blue-600">{toBanglaNum(allMembers.length)}</div>
+                <div className="p-2.5 sm:p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100">
+                  <div className="text-lg sm:text-xl font-black text-blue-600">{toBanglaNum(allMembers.length)}</div>
                   <div className="text-[10px] text-slate-400 font-bold uppercase">মোট সদস্য</div>
                 </div>
-                <div className="p-3 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-100">
-                  <div className="text-xl font-black text-purple-600">
+                <div className="p-2.5 sm:p-3 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-100">
+                  <div className="text-lg sm:text-xl font-black text-purple-600">
                     {toBanglaNum(allMembers.length > 0 ? Math.round(((auditPoll.totalVotes || 0) / allMembers.length) * 100) : 0)}%
                   </div>
                   <div className="text-[10px] text-slate-400 font-bold uppercase">টার্নআউট হার</div>
                 </div>
-                <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-100">
-                  <div className="text-xl font-black text-amber-600">
+                <div className="p-2.5 sm:p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-100">
+                  <div className="text-lg sm:text-xl font-black text-amber-600">
                     {toBanglaNum(((Object.values(auditPoll.votes || {})) as PollVoteRecord[]).filter(v => !!v.comment).length)}
                   </div>
                   <div className="text-[10px] text-slate-400 font-bold uppercase">মতামত জমা</div>
@@ -1260,8 +1268,8 @@ export const DecisionVoting: React.FC<DecisionVotingProps> = ({
               </div>
 
               {/* Voters Table */}
-              <div className="border border-slate-200 dark:border-slate-700/60 rounded-2xl overflow-hidden">
-                <table className="w-full text-left text-xs">
+              <div className="border border-slate-200 dark:border-slate-700/60 rounded-2xl overflow-x-auto">
+                <table className="w-full text-left text-xs min-w-[500px]">
                   <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-400 uppercase font-black">
                     <tr>
                       <th className="p-3.5">সদস্য</th>

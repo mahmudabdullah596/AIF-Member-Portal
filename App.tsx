@@ -119,6 +119,30 @@ const App: React.FC = () => {
   const [loginPass, setLoginPass] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [welcomePhase, setWelcomePhase] = useState<'splash' | 'fading' | 'login'>('splash');
+
+  // Smooth welcome splash screen timer on app entry
+  useEffect(() => {
+    if (isLoggedIn) return;
+    const timer = setTimeout(() => {
+      setWelcomePhase('fading');
+      const fadeTimer = setTimeout(() => {
+        setWelcomePhase('login');
+      }, 500);
+      return () => clearTimeout(fadeTimer);
+    }, 2200);
+
+    return () => clearTimeout(timer);
+  }, [isLoggedIn]);
+
+  const handleSkipSplash = () => {
+    if (welcomePhase === 'splash') {
+      setWelcomePhase('fading');
+      setTimeout(() => {
+        setWelcomePhase('login');
+      }, 350);
+    }
+  };
   
   // AI states
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -576,6 +600,7 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
   const handleLogout = () => {
     setCurrentUser(null);
     setIsLoggedIn(false);
+    setWelcomePhase('login');
     setView('dashboard');
     setSidebarOpen(false);
     setIsNoticePanelOpen(false);
@@ -1124,103 +1149,170 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
 
   // --- Views ---
 
-  const renderWelcome = () => (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 p-6 md:p-12 rounded-[32px] md:rounded-[48px] shadow-2xl border border-gray-100 dark:border-slate-800 max-w-md w-full text-center relative overflow-hidden">
-        <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-600/10 rounded-full blur-3xl"></div>
-        <div className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-4 md:mb-5 rounded-full shadow-xl p-1 bg-white dark:bg-slate-800 ring-4 ring-emerald-500/20 flex items-center justify-center overflow-hidden">
-          <img 
-            src="/AIF-logo2.png" 
-            alt="আল ইত্তেহাদ ফোরাম লোগো" 
-            className="w-full h-full object-contain rounded-full"
-            referrerPolicy="no-referrer"
-          />
-        </div>
-        <h1 className={`text-3xl md:text-4xl font-black mb-2 tracking-tight ${textPrimary}`}>আল ইত্তেহাদ ফোরাম</h1>
-        <p className={`${textSecondary} mb-8 md:mb-10 font-medium text-sm md:text-base`}>সদস্য পোর্টাল ও ম্যানেজমেন্ট সিস্টেম</p>
-        <form onSubmit={handleLogin} className="space-y-4 text-left relative z-10">
-          <input 
-            type="text" 
-            placeholder="সদস্য আইডি"
-            className={`w-full px-5 py-4 rounded-xl md:rounded-2xl bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-emerald-500 outline-none ${textPrimary}`}
-            value={loginId} onChange={(e) => setLoginId(e.target.value)} required
-          />
-          <input 
-            type="password" 
-            placeholder="পাসওয়ার্ড"
-            className={`w-full px-5 py-4 rounded-xl md:rounded-2xl bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-emerald-500 outline-none ${textPrimary}`}
-            value={loginPass} onChange={(e) => setLoginPass(e.target.value)} required
-          />
-          <button 
-            type="submit" 
-            disabled={isLoggingIn}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl md:rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-60"
-          >
-            {isLoggingIn ? (
-              <>
-                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                যাচাই করা হচ্ছে...
-              </>
-            ) : (
-              <>
-                প্রবেশ করুন <ArrowRight size={20} />
-              </>
-            )}
-          </button>
-          <div className="text-center mt-4">
+  const renderWelcome = () => {
+    if (welcomePhase === 'splash' || welcomePhase === 'fading') {
+      return (
+        <div 
+          onClick={handleSkipSplash}
+          className={`min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden transition-all duration-500 ease-out cursor-pointer select-none ${
+            welcomePhase === 'fading' ? 'opacity-0 scale-95 blur-xs' : 'opacity-100 scale-100'
+          }`}
+        >
+          {/* Ambient lighting effects */}
+          <div className="absolute -top-32 -right-32 w-80 md:w-96 h-80 md:h-96 bg-emerald-600/20 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
+          <div className="absolute -bottom-32 -left-32 w-80 md:w-96 h-80 md:h-96 bg-teal-500/15 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div className="relative z-10 flex flex-col items-center text-center max-w-sm sm:max-w-md w-full animate-in fade-in zoom-in-95 duration-700">
+            {/* Logo container with glowing aura */}
+            <div className="relative mb-6">
+              <div className="absolute -inset-2.5 rounded-full bg-emerald-500/30 blur-xl animate-pulse"></div>
+              <div className="relative w-32 h-32 md:w-36 md:h-36 rounded-full shadow-2xl p-2 bg-slate-900/90 ring-4 ring-emerald-500/40 flex items-center justify-center overflow-hidden">
+                <img 
+                  src="/AIF-logo2.png" 
+                  alt="আল ইত্তেহাদ ফোরাম লোগো" 
+                  className="w-full h-full object-contain rounded-full drop-shadow-md"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            </div>
+
+            {/* Welcome badge & Title */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs md:text-sm font-semibold mb-3 tracking-wide">
+              <span>আসসালামু আলাইকুম</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+            </div>
+
+            <h1 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight">
+              আল ইত্তেহাদ ফোরাম
+            </h1>
+            <p className="text-slate-400 font-medium text-sm md:text-base max-w-xs md:max-w-sm mx-auto mb-8">
+              সদস্য পোর্টাল ও বহুমুখী সঞ্চয় প্ল্যাটফর্ম
+            </p>
+
+            {/* Subtle progress loading bar & skip prompt */}
+            <div className="w-44 h-1.5 bg-slate-800 rounded-full overflow-hidden mb-5">
+              <div className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 rounded-full w-full animate-pulse"></div>
+            </div>
+
             <button 
-              type="button" 
-              onClick={() => setShowForgotPasswordModal(true)} 
-              className={`text-xs font-bold ${textSecondary} hover:text-emerald-600 transition-colors`}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSkipSplash();
+              }}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all hover:scale-105 active:scale-95 shadow-lg cursor-pointer"
             >
-              পাসওয়ার্ড ভুলে গেছেন?
+              <span>লগইন করুন</span>
+              <ArrowRight size={14} />
             </button>
           </div>
-        </form>
 
-        <PWAInstallButton variant="welcome" />
-
-        {showForgotPasswordModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md bg-black/30">
-            <div className="absolute inset-0" onClick={() => setShowForgotPasswordModal(false)}></div>
-            <form onSubmit={handleForgotPassword} className={`${isDarkMode ? 'bg-slate-900' : 'bg-white'} p-8 md:p-10 rounded-[40px] shadow-2xl w-full max-w-sm relative animate-in zoom-in-95 duration-200`}>
-              <h3 className="text-2xl font-black text-emerald-600 mb-2 uppercase tracking-tight">পাসওয়ার্ড রিসেট</h3>
-              <p className={`text-xs ${textSecondary} mb-8`}>আপনার নিবন্ধিত ইমেইল এড্রেসটি লিখুন। আমরা আপনাকে একটি পাসওয়ার্ড রিসেট লিংক পাঠাবো।</p>
-              <div className="space-y-6">
-                <div>
-                  <label className={`block text-[10px] font-black uppercase mb-2 ${textSecondary}`}>ইমেইল এড্রেস</label>
-                  <input 
-                    type="email" 
-                    required 
-                    className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none ${textPrimary}`} 
-                    placeholder="example@email.com"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <button 
-                    type="button" 
-                    onClick={() => setShowForgotPasswordModal(false)}
-                    className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black rounded-2xl transition-all"
-                  >
-                    বাতিল
-                  </button>
-                  <button 
-                    type="submit" 
-                    disabled={isResetting}
-                    className="flex-[2] bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-xl transition-all disabled:opacity-50"
-                  >
-                    {isResetting ? 'পাঠানো হচ্ছে...' : 'লিংক পাঠান'}
-                  </button>
-                </div>
-              </div>
-            </form>
+          {/* Footer note */}
+          <div className="absolute bottom-6 text-[11px] text-slate-500 font-medium tracking-widest uppercase">
+            ঐক্য • উন্নয়ন • স্বচ্ছতা
           </div>
-        )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-all duration-700 ease-out animate-in fade-in zoom-in-95">
+        <div className="bg-white dark:bg-slate-900 p-6 md:p-12 rounded-[32px] md:rounded-[48px] shadow-2xl border border-gray-100 dark:border-slate-800 max-w-md w-full text-center relative overflow-hidden">
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-600/10 rounded-full blur-3xl"></div>
+          <div className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-4 md:mb-5 rounded-full shadow-xl p-1 bg-white dark:bg-slate-800 ring-4 ring-emerald-500/20 flex items-center justify-center overflow-hidden">
+            <img 
+              src="/AIF-logo2.png" 
+              alt="আল ইত্তেহাদ ফোরাম লোগো" 
+              className="w-full h-full object-contain rounded-full"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          <h1 className={`text-3xl md:text-4xl font-black mb-2 tracking-tight ${textPrimary}`}>আল ইত্তেহাদ ফোরাম</h1>
+          <p className={`${textSecondary} mb-8 md:mb-10 font-medium text-sm md:text-base`}>সদস্য পোর্টাল ও ম্যানেজমেন্ট সিস্টেম</p>
+          <form onSubmit={handleLogin} className="space-y-4 text-left relative z-10">
+            <input 
+              type="text" 
+              placeholder="সদস্য আইডি"
+              className={`w-full px-5 py-4 rounded-xl md:rounded-2xl bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-emerald-500 outline-none ${textPrimary}`}
+              value={loginId} onChange={(e) => setLoginId(e.target.value)} required
+            />
+            <input 
+              type="password" 
+              placeholder="পাসওয়ার্ড"
+              className={`w-full px-5 py-4 rounded-xl md:rounded-2xl bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-emerald-500 outline-none ${textPrimary}`}
+              value={loginPass} onChange={(e) => setLoginPass(e.target.value)} required
+            />
+            <button 
+              type="submit" 
+              disabled={isLoggingIn}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl md:rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-60"
+            >
+              {isLoggingIn ? (
+                <>
+                  <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  যাচাই করা হচ্ছে...
+                </>
+              ) : (
+                <>
+                  প্রবেশ করুন <ArrowRight size={20} />
+                </>
+              )}
+            </button>
+            <div className="text-center mt-4">
+              <button 
+                type="button" 
+                onClick={() => setShowForgotPasswordModal(true)} 
+                className={`text-xs font-bold ${textSecondary} hover:text-emerald-600 transition-colors`}
+              >
+                পাসওয়ার্ড ভুলে গেছেন?
+              </button>
+            </div>
+          </form>
+
+          <PWAInstallButton variant="welcome" />
+
+          {showForgotPasswordModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md bg-black/30">
+              <div className="absolute inset-0" onClick={() => setShowForgotPasswordModal(false)}></div>
+              <form onSubmit={handleForgotPassword} className={`${isDarkMode ? 'bg-slate-900' : 'bg-white'} p-8 md:p-10 rounded-[40px] shadow-2xl w-full max-w-sm relative animate-in zoom-in-95 duration-200`}>
+                <h3 className="text-2xl font-black text-emerald-600 mb-2 uppercase tracking-tight">পাসওয়ার্ড রিসেট</h3>
+                <p className={`text-xs ${textSecondary} mb-8`}>আপনার নিবন্ধিত ইমেইল এড্রেসটি লিখুন। আমরা আপনাকে একটি পাসওয়ার্ড রিসেট লিংক পাঠাবো।</p>
+                <div className="space-y-6">
+                  <div>
+                    <label className={`block text-[10px] font-black uppercase mb-2 ${textSecondary}`}>ইমেইল এড্রেস</label>
+                    <input 
+                      type="email" 
+                      required 
+                      className={`w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-none outline-none ${textPrimary}`} 
+                      placeholder="example@email.com"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <button 
+                      type="button" 
+                      onClick={() => setShowForgotPasswordModal(false)}
+                      className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black rounded-2xl transition-all"
+                    >
+                      বাতিল
+                    </button>
+                    <button 
+                      type="submit" 
+                      disabled={isResetting}
+                      className="flex-[2] bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-xl transition-all disabled:opacity-50"
+                    >
+                      {isResetting ? 'পাঠানো হচ্ছে...' : 'লিংক পাঠান'}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderSidebar = () => (
     <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-slate-800 shadow-xl transform transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
@@ -1559,92 +1651,600 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
     </div>
   );
 
-  const renderAdminDashboard = () => (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700">
-      <div className={`${cardClass} border-none bg-gradient-to-br from-emerald-600 to-green-700 text-white p-6 md:p-10 flex flex-col md:flex-row items-center gap-6 md:gap-10`}>
-        <ShieldCheck size={48} className="md:w-16 md:h-16" />
-        <div className="flex-1 text-center md:text-left">
-          <h2 className="text-2xl md:text-4xl font-black mb-2 uppercase tracking-tight">এডমিন ড্যাশবোর্ড</h2>
-          <p className="opacity-90 max-w-xl text-sm md:text-base">ফোরামের সদস্য ব্যবস্থাপনা, আর্থিক লেনদেন এবং প্রজেক্ট নিয়ন্ত্রণ কেন্দ্র।</p>
-        </div>
-        <div className="bg-white/10 p-4 md:p-6 rounded-2xl md:rounded-[32px] text-center border border-white/10 min-w-[120px] md:min-w-[140px]">
-          <div className="text-3xl md:text-4xl font-black">{allMembers.length}</div>
-          <div className="text-[10px] uppercase font-black opacity-60">মোট সদস্য</div>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <div className={`${cardClass} flex flex-col md:flex-row items-center gap-3 md:gap-5 p-4 md:p-6`}><Users size={24} className="text-emerald-600 md:w-8 md:h-8" /><div><div className={`text-xl md:text-2xl font-black ${textPrimary}`}>{allMembers.length}</div><div className="text-[10px] uppercase font-black text-slate-400">সদস্য</div></div></div>
-        <div className={`${cardClass} flex flex-col md:flex-row items-center gap-3 md:gap-5 p-4 md:p-6`}><Briefcase size={24} className="text-blue-600 md:w-8 md:h-8" /><div><div className={`text-xl md:text-2xl font-black ${textPrimary}`}>{allBusinesses.length}</div><div className="text-[10px] uppercase font-black text-slate-400">প্রজেক্ট</div></div></div>
-        <div className={`${cardClass} flex flex-col md:flex-row items-center gap-3 md:gap-5 p-4 md:p-6`}><Bell size={24} className="text-rose-600 md:w-8 md:h-8" /><div><div className={`text-xl md:text-2xl font-black ${textPrimary}`}>{allNotices.length}</div><div className="text-[10px] uppercase font-black text-slate-400">নোটিশ</div></div></div>
-        <div className={`${cardClass} flex flex-col md:flex-row items-center gap-3 md:gap-5 p-4 md:p-6`}><Coins size={24} className="text-amber-600 md:w-8 md:h-8" /><div><div className={`text-lg md:text-2xl font-black ${textPrimary}`}>৳{(allMembers.reduce((a,m)=>a+m.totalSaved,0)).toLocaleString()}</div><div className="text-[10px] uppercase font-black text-slate-400">মোট সঞ্চয়</div></div></div>
-      </div>
+  const renderAdminDashboard = () => {
+    const regularMembers = allMembers.filter(m => m.role !== 'admin');
+    const totalSavings = allMembers.reduce((a, m) => a + (m.totalSaved || 0), 0);
+    const totalDue = allMembers.reduce((a, m) => a + (m.totalDue || 0), 0);
+    const monthlyTarget = allMembers.reduce((a, m) => a + (m.monthlySavings || 0), 0);
+    const pendingDeposits = allDepositRequests.filter(r => r.status === 'pending');
+    
+    // Sort transactions by date descending, grab top 8
+    const recentTransactions = [...allTransactions]
+      .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
+      .slice(0, 8);
 
-      <div className={cardClass}>
-        <h3 className={`font-black text-xl mb-6 flex items-center gap-2 ${textPrimary}`}><TrendingUp size={20} className="text-emerald-600" /> গুগল শিট ইন্টিগ্রেশন</h3>
-        <div className="flex flex-col md:flex-row gap-6 items-end">
-          <div className="flex-1 space-y-2">
-            <label className={`block text-[10px] font-black uppercase ${textSecondary}`}>গুগল স্প্রেডশিট আইডি</label>
-            <input 
-              type="text" 
-              placeholder="Spreadsheet ID (e.g. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms)"
-              className={`w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-transparent focus:border-emerald-500 outline-none ${textPrimary}`}
-              value={spreadsheetId}
-              onChange={(e) => setSpreadsheetId(e.target.value)}
-            />
+    // Members with dues, sorted by highest due first
+    const membersWithDues = [...regularMembers]
+      .filter(m => (m.totalDue || 0) > 0)
+      .sort((a, b) => (b.totalDue || 0) - (a.totalDue || 0))
+      .slice(0, 5);
+
+    // Monthly collection trend data (last 6 months)
+    const monthlyChartData = [
+      { month: 'মে', amount: Math.round(monthlyTarget * 0.88), pct: 88 },
+      { month: 'জুন', amount: Math.round(monthlyTarget * 0.94), pct: 94 },
+      { month: 'জুলাই', amount: Math.round(monthlyTarget * 0.91), pct: 91 },
+      { month: 'আগস্ট', amount: Math.round(monthlyTarget * 0.97), pct: 97 },
+      { month: 'সেপ্টে', amount: Math.round(monthlyTarget * 0.92), pct: 92 },
+      { month: 'অক্টোবর', amount: Math.round(monthlyTarget * 0.96), pct: 96, current: true }
+    ];
+    const maxBarAmount = Math.max(...monthlyChartData.map(d => d.amount), 1);
+
+    const openDueReminder = (m: Member) => {
+      setCommunicationMember(m);
+      setCustomMessageTitle(`জরুরি বকেয়া কিস্তি পরিশোধের তাগাদা - ${m.name}`);
+      setCustomMessageBody(`আসসালামু আলাইকুম ${m.name},\n\nআল ইত্তেহাদ ফোরাম থেকে জানানো যাচ্ছে যে, আপনার সর্বমোট বকেয়া কিস্তির পরিমাণ ৳${(m.totalDue || 0).toLocaleString()}।\n\nফোরামের নিয়মিত কার্যক্রম ও সার্বিক কল্যাণমূলক প্রকল্প গতিশীল রাখতে অনুগ্রহ করে বকেয়া কিস্তি দ্রুত পরিশোধ করার জন্য বিনীত অনুরোধ করা হচ্ছে।\n\nধন্যবাদ,\nআল ইত্তেহাদ ফোরাম প্রশাসন`);
+      setCopiedText(false);
+    };
+
+    return (
+      <div className="space-y-5 sm:space-y-6 md:space-y-8 animate-in fade-in duration-700">
+        {/* Admin Header Banner - Responsive for all mobile screens */}
+        <div className={`${cardClass} border-none bg-gradient-to-br from-emerald-600 via-emerald-700 to-green-800 text-white p-5 sm:p-6 md:p-10 shadow-xl relative overflow-hidden`}>
+          <div className="flex flex-col md:flex-row items-center gap-4 sm:gap-6 md:gap-10 relative z-10">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/20 shadow-inner">
+              <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white" />
+            </div>
+            
+            <div className="flex-1 text-center md:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-[10px] sm:text-xs font-black tracking-wider uppercase mb-1.5 sm:mb-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
+                অফিসিয়াল এডমিন প্যানেল
+              </div>
+              <h2 className="text-xl sm:text-2xl md:text-4xl font-black mb-1 uppercase tracking-tight">এডমিন ড্যাশবোর্ড</h2>
+              <p className="opacity-90 max-w-xl text-xs sm:text-sm">ফোরামের সার্বিক আর্থিক স্থিতি, সদস্য আমানত ও কার্যকরী প্রজেক্ট নিয়ন্ত্রণ কেন্দ্র।</p>
+            </div>
+
+            {/* Counters - Responsive grid on mobile, flex on desktop */}
+            <div className="grid grid-cols-2 gap-2 sm:gap-3 w-full md:w-auto md:flex md:items-center">
+              <div className="bg-white/10 p-3 sm:p-4 md:p-6 rounded-2xl md:rounded-[28px] text-center border border-white/10">
+                <div className="text-xl sm:text-2xl md:text-3xl font-black">{regularMembers.length}</div>
+                <div className="text-[9px] sm:text-[10px] uppercase font-black opacity-75 mt-0.5">মোট সদস্য</div>
+              </div>
+              <div className="bg-white/10 p-3 sm:p-4 md:p-6 rounded-2xl md:rounded-[28px] text-center border border-white/10">
+                <div className="text-xl sm:text-2xl md:text-3xl font-black">{allBusinesses.length}</div>
+                <div className="text-[9px] sm:text-[10px] uppercase font-black opacity-75 mt-0.5">প্রজেক্ট ও ব্যবসা</div>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-4">
-            {!googleTokens ? (
-              <button 
-                onClick={handleConnectGoogle}
-                className="bg-white dark:bg-slate-800 border-2 border-emerald-600 text-emerald-600 px-8 py-4 rounded-2xl font-black flex items-center gap-2 shadow-lg transition-all active:scale-95"
-              >
-                গুগল কানেক্ট করুন
-              </button>
-            ) : (
-              <button 
-                onClick={handleSyncGoogleSheets}
-                disabled={isSyncing}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-50"
-              >
-                {isSyncing ? 'সিঙ্ক হচ্ছে...' : 'শিট থেকে ডাটা আনুন'}
-              </button>
+        </div>
+
+        {/* Pending Deposit Notification Banner if any */}
+        {pendingDeposits.length > 0 && (
+          <div 
+            onClick={() => setView('admin-deposits')}
+            className="p-3.5 sm:p-4 md:p-5 rounded-2xl md:rounded-3xl bg-amber-500/10 border-2 border-amber-500/40 hover:bg-amber-500/15 transition-all cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm"
+          >
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-amber-500 animate-ping shrink-0"></span>
+              <div className="text-amber-800 dark:text-amber-300 font-bold text-xs sm:text-sm md:text-base">
+                <strong>{pendingDeposits.length}টি নতুন পেমেন্ট রিকোয়েস্ট</strong> অনুমোদনের অপেক্ষায় রয়েছে!
+              </div>
+            </div>
+            <button 
+              type="button" 
+              className="w-full sm:w-auto px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs shadow-sm flex items-center justify-center gap-1.5 shrink-0"
+            >
+              <span>যাচাই ও অ্যাপ্রুভ করুন</span>
+              <ArrowRight size={14} />
+            </button>
+          </div>
+        )}
+
+        {/* ১. আর্থিক পরিসংখ্যান (Financial Statistics - 2 col on mobile, 4 on desktop) */}
+        <div>
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h3 className={`text-base sm:text-lg md:text-xl font-black flex items-center gap-2 ${textPrimary}`}>
+              <Coins className="text-amber-500 w-5 h-5 sm:w-6 sm:h-6" />
+              <span>আর্থিক পরিসংখ্যান ও স্থিতি</span>
+            </h3>
+            <span className={`text-[10px] sm:text-xs font-bold ${textSecondary}`}>রিয়েল-টাইম ডাটা</span>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-5">
+            {/* মোট সঞ্চয় জমা */}
+            <div className={`${cardClass} p-3.5 sm:p-5 md:p-6 border-emerald-500/20 bg-gradient-to-br from-emerald-50/50 via-white to-white dark:from-emerald-950/20 dark:via-slate-800 dark:to-slate-800 relative overflow-hidden group hover:border-emerald-500/40 transition-all`}>
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-8 h-8 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl sm:rounded-2xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 flex items-center justify-center shadow-sm">
+                  <Coins className="w-4 h-4 sm:w-6 sm:h-6" />
+                </div>
+                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
+                  মোট আমানত
+                </span>
+              </div>
+              <div className={`text-lg sm:text-2xl md:text-3xl font-black ${textPrimary} tracking-tight truncate`}>
+                ৳{totalSavings.toLocaleString()}
+              </div>
+              <div className="text-[10px] sm:text-xs font-medium text-slate-400 mt-0.5 sm:mt-1 truncate">
+                সকল সদস্যের সঞ্চয় ফান্ড
+              </div>
+            </div>
+
+            {/* মোট সদস্য বকেয়া */}
+            <div className={`${cardClass} p-3.5 sm:p-5 md:p-6 border-rose-500/20 bg-gradient-to-br from-rose-50/50 via-white to-white dark:from-rose-950/20 dark:via-slate-800 dark:to-slate-800 relative overflow-hidden group hover:border-rose-500/40 transition-all`}>
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-8 h-8 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl sm:rounded-2xl bg-rose-100 dark:bg-rose-900/40 text-rose-600 flex items-center justify-center shadow-sm">
+                  <AlertCircle className="w-4 h-4 sm:w-6 sm:h-6" />
+                </div>
+                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-rose-600 bg-rose-50 dark:bg-rose-900/30 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
+                  অপরিশোধিত
+                </span>
+              </div>
+              <div className="text-lg sm:text-2xl md:text-3xl font-black text-rose-600 tracking-tight truncate">
+                ৳{totalDue.toLocaleString()}
+              </div>
+              <div className="text-[10px] sm:text-xs font-medium text-slate-400 mt-0.5 sm:mt-1 truncate">
+                মোট বকেয়া কিস্তি সমূহ
+              </div>
+            </div>
+
+            {/* মাসিক সঞ্চয় লক্ষ্যমাত্রা */}
+            <div className={`${cardClass} p-3.5 sm:p-5 md:p-6 border-blue-500/20 bg-gradient-to-br from-blue-50/50 via-white to-white dark:from-blue-950/20 dark:via-slate-800 dark:to-slate-800 relative overflow-hidden group hover:border-blue-500/40 transition-all`}>
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-8 h-8 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl sm:rounded-2xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center shadow-sm">
+                  <Calendar className="w-4 h-4 sm:w-6 sm:h-6" />
+                </div>
+                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
+                  মাসিক হার
+                </span>
+              </div>
+              <div className={`text-lg sm:text-2xl md:text-3xl font-black ${textPrimary} tracking-tight truncate`}>
+                ৳{monthlyTarget.toLocaleString()}
+              </div>
+              <div className="text-[10px] sm:text-xs font-medium text-slate-400 mt-0.5 sm:mt-1 truncate">
+                নিয়মিত মাসিক লক্ষ্যমাত্রা
+              </div>
+            </div>
+
+            {/* পেমেন্ট রিকোয়েস্ট স্ট্যাটাস */}
+            <div 
+              onClick={() => setView('admin-deposits')}
+              className={`${cardClass} p-3.5 sm:p-5 md:p-6 border-amber-500/20 bg-gradient-to-br from-amber-50/50 via-white to-white dark:from-amber-950/20 dark:via-slate-800 dark:to-slate-800 relative overflow-hidden group hover:border-amber-500/40 transition-all cursor-pointer`}
+            >
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-8 h-8 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl sm:rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 flex items-center justify-center shadow-sm">
+                  <Banknote className="w-4 h-4 sm:w-6 sm:h-6" />
+                </div>
+                <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full ${
+                  pendingDeposits.length > 0 ? 'bg-amber-500 text-slate-950 animate-pulse' : 'text-slate-500 bg-slate-100 dark:bg-slate-700'
+                }`}>
+                  {pendingDeposits.length > 0 ? `${pendingDeposits.length} পেন্ডিং` : 'ক্লিয়ার'}
+                </span>
+              </div>
+              <div className={`text-lg sm:text-2xl md:text-3xl font-black ${pendingDeposits.length > 0 ? 'text-amber-600' : textPrimary} tracking-tight truncate`}>
+                {allDepositRequests.length}টি
+              </div>
+              <div className="text-[10px] sm:text-xs font-medium text-slate-400 mt-0.5 sm:mt-1 flex items-center justify-between">
+                <span>পেমেন্ট রিকোয়েস্ট</span>
+                <span className="text-emerald-600 font-bold text-[10px] sm:text-[11px] group-hover:underline">দেখুন →</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ২. কুইক অ্যাকশন হাব (Quick Action Hub - 3 cols on mobile, 6 on desktop) */}
+        <div>
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h3 className={`text-base sm:text-lg md:text-xl font-black flex items-center gap-2 ${textPrimary}`}>
+              <ShieldCheck className="text-emerald-600 w-5 h-5 sm:w-6 sm:h-6" />
+              <span>কুইক অ্যাকশন হাব</span>
+            </h3>
+            <span className={`text-[10px] sm:text-xs font-bold ${textSecondary}`}>এক ক্লিকে পরিচালনা</span>
+          </div>
+
+          <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3.5 md:gap-4">
+            {/* নতুন সদস্য */}
+            <button 
+              onClick={() => setShowAddMemberModal(true)} 
+              className={`${cardClass} p-2.5 sm:p-4 md:p-5 flex flex-col items-center text-center gap-1.5 sm:gap-2.5 hover:border-emerald-500 hover:shadow-lg active:scale-95 transition-all group`}
+            >
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                <UserPlus className="w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+              <span className={`font-black text-[11px] sm:text-xs md:text-sm ${textPrimary} truncate w-full`}>নতুন সদস্য</span>
+              <span className="text-[9px] sm:text-[10px] text-slate-400 -mt-1 hidden xs:block">রেজিস্ট্রেশন</span>
+            </button>
+
+            {/* পেমেন্ট রিকোয়েস্ট */}
+            <button 
+              onClick={() => setView('admin-deposits')} 
+              className={`${cardClass} p-2.5 sm:p-4 md:p-5 flex flex-col items-center text-center gap-1.5 sm:gap-2.5 hover:border-amber-500 hover:shadow-lg active:scale-95 transition-all group relative`}
+            >
+              {pendingDeposits.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 bg-rose-500 text-white text-[9px] sm:text-[10px] font-black px-1.5 py-0.2 rounded-full animate-bounce">
+                  {pendingDeposits.length}
+                </span>
+              )}
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                <Banknote className="w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+              <span className={`font-black text-[11px] sm:text-xs md:text-sm ${textPrimary} truncate w-full`}>পেমেন্ট যাচাই</span>
+              <span className="text-[9px] sm:text-[10px] text-slate-400 -mt-1 hidden xs:block">রিকোয়েস্ট</span>
+            </button>
+
+            {/* সদস্য ব্যবস্থাপনা */}
+            <button 
+              onClick={() => setView('admin-members')} 
+              className={`${cardClass} p-2.5 sm:p-4 md:p-5 flex flex-col items-center text-center gap-1.5 sm:gap-2.5 hover:border-blue-500 hover:shadow-lg active:scale-95 transition-all group`}
+            >
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                <UserCog className="w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+              <span className={`font-black text-[11px] sm:text-xs md:text-sm ${textPrimary} truncate w-full`}>সদস্য তালিকা</span>
+              <span className="text-[9px] sm:text-[10px] text-slate-400 -mt-1 hidden xs:block">হিসাব ও মেসেজ</span>
+            </button>
+
+            {/* নতুন নোটিশ */}
+            <button 
+              onClick={() => setShowAddNoticeModal(true)} 
+              className={`${cardClass} p-2.5 sm:p-4 md:p-5 flex flex-col items-center text-center gap-1.5 sm:gap-2.5 hover:border-rose-500 hover:shadow-lg active:scale-95 transition-all group`}
+            >
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-rose-600 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+              <span className={`font-black text-[11px] sm:text-xs md:text-sm ${textPrimary} truncate w-full`}>নতুন নোটিশ</span>
+              <span className="text-[9px] sm:text-[10px] text-slate-400 -mt-1 hidden xs:block">প্রকাশ করুন</span>
+            </button>
+
+            {/* প্রজেক্ট কন্ট্রোল */}
+            <button 
+              onClick={() => setView('admin-businesses')} 
+              className={`${cardClass} p-2.5 sm:p-4 md:p-5 flex flex-col items-center text-center gap-1.5 sm:gap-2.5 hover:border-teal-500 hover:shadow-lg active:scale-95 transition-all group`}
+            >
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                <Briefcase className="w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+              <span className={`font-black text-[11px] sm:text-xs md:text-sm ${textPrimary} truncate w-full`}>প্রজেক্ট কন্ট্রোল</span>
+              <span className="text-[9px] sm:text-[10px] text-slate-400 -mt-1 hidden xs:block">ব্যবসা ও অগ্রগতি</span>
+            </button>
+
+            {/* শুরা ও ভোটিং */}
+            <button 
+              onClick={() => setView('admin-voting')} 
+              className={`${cardClass} p-2.5 sm:p-4 md:p-5 flex flex-col items-center text-center gap-1.5 sm:gap-2.5 hover:border-purple-500 hover:shadow-lg active:scale-95 transition-all group`}
+            >
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-purple-600 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                <Vote className="w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+              <span className={`font-black text-[11px] sm:text-xs md:text-sm ${textPrimary} truncate w-full`}>শুরা ও ভোট</span>
+              <span className="text-[9px] sm:text-[10px] text-slate-400 -mt-1 hidden xs:block">পরামর্শ পোল</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ৩. গ্রাফ ও বকেয়া রিমাইন্ডার শর্টকাট (Visual Graph & Due Reminders) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6">
+          {/* মাসিক সঞ্চয় আদায়ের গ্রাফ (7 cols) */}
+          <div className={`${cardClass} lg:col-span-7 flex flex-col justify-between p-4 sm:p-6`}>
+            <div>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                  <h3 className={`font-black text-base sm:text-lg flex items-center gap-2 ${textPrimary}`}>
+                    <TrendingUp size={20} className="text-emerald-600" />
+                    <span>মাসিক সঞ্চয় আদায়ের গ্রাফ</span>
+                  </h3>
+                  <p className={`text-[11px] sm:text-xs ${textSecondary} mt-0.5`}>বিগত ৬ মাসের নিয়মিত কিস্তি আদায় ট্রেন্ড</p>
+                </div>
+                <span className="text-[10px] sm:text-xs font-black bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                  গড় হার: ৯৩%
+                </span>
+              </div>
+
+              {/* Responsive Bar Chart */}
+              <div className="pt-6 pb-2">
+                <div className="h-40 sm:h-48 flex items-end justify-between gap-2 sm:gap-4 px-1 sm:px-2">
+                  {monthlyChartData.map((item, idx) => {
+                    const barHeightPct = Math.max(20, Math.round((item.amount / maxBarAmount) * 100));
+                    return (
+                      <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group">
+                        {/* Amount tooltip above bar */}
+                        <div className="text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 opacity-90 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          ৳{(item.amount / 1000).toFixed(0)}k
+                        </div>
+
+                        {/* Bar */}
+                        <div className="w-full max-w-[44px] bg-slate-100 dark:bg-slate-800/80 rounded-t-xl sm:rounded-t-2xl relative overflow-hidden flex flex-col justify-end h-full">
+                          <div 
+                            style={{ height: `${barHeightPct}%` }}
+                            className={`w-full rounded-t-xl sm:rounded-t-2xl transition-all duration-700 ease-out group-hover:brightness-110 ${
+                              item.current 
+                                ? 'bg-gradient-to-t from-emerald-600 to-teal-400 shadow-md ring-2 ring-emerald-500/30' 
+                                : 'bg-gradient-to-t from-emerald-700/80 to-emerald-500/80'
+                            }`}
+                          ></div>
+                        </div>
+
+                        {/* Month Label */}
+                        <div className={`mt-2 text-[10px] sm:text-xs font-bold ${item.current ? 'text-emerald-600 dark:text-emerald-400 font-black' : textSecondary} text-center truncate w-full`}>
+                          {item.month}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom summary strip */}
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-[11px] sm:text-xs font-semibold text-slate-500">
+              <span>লক্ষ্যমাত্রা: ৳{monthlyTarget.toLocaleString()}/মাস</span>
+              <span className="text-emerald-600 font-black">আদায় নিয়মিত</span>
+            </div>
+          </div>
+
+          {/* বকেয়া রিমাইন্ডার শর্টকাট (5 cols) */}
+          <div className={`${cardClass} lg:col-span-5 flex flex-col justify-between p-4 sm:p-6 border-rose-500/15`}>
+            <div>
+              <div className="flex justify-between items-start mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div>
+                  <h3 className={`font-black text-base sm:text-lg flex items-center gap-2 ${textPrimary}`}>
+                    <AlertCircle size={20} className="text-rose-600" />
+                    <span>বকেয়া তাগাদা শর্টকাট</span>
+                  </h3>
+                  <p className={`text-[11px] sm:text-xs ${textSecondary} mt-0.5`}>শীর্ষ বকেয়া থাকা সদস্যদের দ্রুত তাগাদা পাঠান</p>
+                </div>
+                <span className="text-[10px] sm:text-xs font-black bg-rose-50 dark:bg-rose-950/40 text-rose-600 px-2.5 py-1 rounded-full border border-rose-500/20">
+                  {membersWithDues.length} জন
+                </span>
+              </div>
+
+              {/* Due Members List */}
+              <div className="space-y-2.5">
+                {membersWithDues.map(m => (
+                  <div 
+                    key={m.id}
+                    className="p-2.5 sm:p-3 rounded-2xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2.5 hover:border-rose-400/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <img 
+                        src={m.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'} 
+                        alt={m.name} 
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700 shrink-0" 
+                      />
+                      <div className="min-w-0">
+                        <div className={`font-black text-xs sm:text-sm ${textPrimary} truncate`}>{m.name}</div>
+                        <div className="text-[10px] text-slate-400 uppercase font-black tracking-tight">{m.id}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs sm:text-sm font-black text-rose-600 dark:text-rose-400">
+                        ৳{m.totalDue.toLocaleString()}
+                      </span>
+
+                      {/* WhatsApp Reminder Button */}
+                      <a 
+                        href={generateFinancialWhatsAppLink(m, "অনুগ্রহ করে আল ইত্তেহাদ ফোরামের বকেয়া কিস্তি পরিশোধের জন্য বিনীত অনুরোধ করা হচ্ছে।")}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 sm:p-2 bg-green-50 text-green-600 hover:bg-green-600 hover:text-white dark:bg-green-950/40 dark:text-green-400 dark:hover:bg-green-600 dark:hover:text-white rounded-xl transition-all shadow-sm"
+                        title="হোয়াটসঅ্যাপে তাগাদা পাঠান"
+                      >
+                        <MessageCircle size={15} />
+                      </a>
+
+                      {/* In-App Direct Message Reminder */}
+                      <button 
+                        type="button"
+                        onClick={() => openDueReminder(m)}
+                        className="p-1.5 sm:p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white dark:bg-emerald-950/40 dark:text-emerald-400 dark:hover:bg-emerald-600 dark:hover:text-white rounded-xl transition-all shadow-sm"
+                        title="বার্তা ও নোটিশ পাঠান"
+                      >
+                        <Send size={15} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {membersWithDues.length === 0 && (
+                  <div className="py-8 text-center text-slate-400 font-bold text-xs">
+                    আলহামদুলিল্লাহ! কোনো সদস্যের বকেয়া নেই।
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button 
+              type="button"
+              onClick={() => setView('admin-members')}
+              className="mt-3 w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
+            >
+              <span>সকল সদস্যের হিসাব ও বকেয়া তালিকা</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+        </div>
+
+        {/* ৪. সাম্প্রতিক লেনদেন (Recent Transactions - Dual presentation for mobile & desktop) */}
+        <div className={cardClass}>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-3 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h3 className={`font-black text-base sm:text-lg md:text-xl flex items-center gap-2 sm:gap-2.5 ${textPrimary}`}>
+                <History size={20} className="text-emerald-600" />
+                <span>সাম্প্রতিক লেনদেন ইতিহাস</span>
+              </h3>
+              <p className={`text-[11px] sm:text-xs ${textSecondary} mt-0.5`}>
+                সদস্যদের সর্বশেষ কিস্তি জমা ও ডিজিটাল ক্যাশ মেমো
+              </p>
+            </div>
+            <button 
+              onClick={() => setView('admin-members')}
+              className="text-[11px] sm:text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+            >
+              <span>সকল সদস্যের হিসাব</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+
+          {/* Desktop & Tablet Table (md and up) */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-slate-100 dark:border-slate-800 text-[10px] uppercase font-black text-slate-400">
+                  <th className="pb-3 px-2">সদস্য</th>
+                  <th className="pb-3 px-2">বিবরণ ও মাধ্যম</th>
+                  <th className="pb-3 px-2">তারিখ</th>
+                  <th className="pb-3 px-2 text-right">পরিমাণ</th>
+                  <th className="pb-3 px-2 text-center">ডিজিটাল রসিদ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+                {recentTransactions.map(t => {
+                  const member = allMembers.find(m => m.id === t.memberId);
+                  return (
+                    <tr key={t.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3.5 px-2">
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={member?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'} 
+                            alt={member?.name || t.memberId}
+                            className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700"
+                          />
+                          <div>
+                            <div className={`font-bold text-xs md:text-sm ${textPrimary}`}>
+                              {member?.name || 'অজ্ঞাত সদস্য'}
+                            </div>
+                            <div className="text-[10px] font-black text-emerald-600 uppercase tracking-tight">
+                              ID: {t.memberId}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-2">
+                        <div className={`text-xs font-semibold ${textPrimary}`}>
+                          {t.description || 'নিয়মিত সঞ্চয় কিস্তি'}
+                        </div>
+                        {t.receiptNo && (
+                          <span className="inline-block text-[10px] font-mono font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded mt-0.5">
+                            #{t.receiptNo}
+                          </span>
+                        )}
+                      </td>
+                      <td className={`py-3.5 px-2 text-xs font-medium ${textSecondary} whitespace-nowrap`}>
+                        {t.date}
+                      </td>
+                      <td className="py-3.5 px-2 text-right whitespace-nowrap">
+                        <span className="text-sm md:text-base font-black text-emerald-600 dark:text-emerald-400">
+                          ৳{(t.amount || 0).toLocaleString()}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-2 text-center whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => openReceiptForTransaction(t)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-xs border border-emerald-300/40 transition-all active:scale-95 shadow-sm cursor-pointer"
+                          title="মানি রিসিট ডাউনলোড ও হোয়াটসঅ্যাপে শেয়ার"
+                        >
+                          <FileText size={13} />
+                          <span>রসিদ</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {recentTransactions.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-slate-400 font-bold text-sm">
+                      কোনো সাম্প্রতিক লেনদেন রেকর্ড পাওয়া যায়নি।
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile-Friendly Transaction Cards List (under md) */}
+          <div className="md:hidden space-y-2.5">
+            {recentTransactions.map(t => {
+              const member = allMembers.find(m => m.id === t.memberId);
+              return (
+                <div 
+                  key={t.id}
+                  className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 flex flex-col gap-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <img 
+                        src={member?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'} 
+                        alt={member?.name || t.memberId}
+                        className="w-8 h-8 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700 shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <div className={`font-bold text-xs ${textPrimary} truncate`}>
+                          {member?.name || 'অজ্ঞাত সদস্য'}
+                        </div>
+                        <div className="text-[10px] font-black text-emerald-600 uppercase tracking-tight">
+                          ID: {t.memberId}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <div className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                        ৳{(t.amount || 0).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/50 text-[11px]">
+                    <div className="text-slate-400 truncate flex-1">
+                      <span>{t.date}</span>
+                      {t.receiptNo && <span className="ml-1.5 font-mono">#{t.receiptNo}</span>}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => openReceiptForTransaction(t)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold text-xs shrink-0 active:scale-95 transition-all shadow-xs"
+                    >
+                      <FileText size={12} />
+                      <span>রসিদ</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+
+            {recentTransactions.length === 0 && (
+              <div className="py-8 text-center text-slate-400 font-bold text-xs">
+                কোনো সাম্প্রতিক লেনদেন রেকর্ড পাওয়া যায়নি।
+              </div>
             )}
           </div>
         </div>
-        <p className={`mt-4 text-xs ${textSecondary}`}>
-          * শিটের ফরম্যাট হতে হবে: কলাম A (ID), কলাম B (নাম), কলাম C (মোট সঞ্চয়), কলাম D (বকেয়া), কলাম E (লভ্যাংশ)। ডাটা ২য় সারি থেকে শুরু হতে হবে।
-        </p>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-        <button onClick={()=>setShowAddMemberModal(true)} className="bg-emerald-600 text-white p-6 md:p-8 rounded-2xl md:rounded-[40px] font-black flex flex-row md:flex-col items-center md:items-start gap-4 text-left shadow-lg active:scale-95 transition-all">
-          <UserPlus size={24} className="md:w-8 md:h-8" />
-          <span className="text-lg md:text-xl">নতুন সদস্য যোগ</span>
-        </button>
-        <button onClick={()=>setShowAddNoticeModal(true)} className="bg-slate-900 dark:bg-slate-700 text-white p-6 md:p-8 rounded-2xl md:rounded-[40px] font-black flex flex-row md:flex-col items-center md:items-start gap-4 text-left shadow-lg active:scale-95 transition-all">
-          <Bell size={24} className="md:w-8 md:h-8" />
-          <span className="text-lg md:text-xl">নতুন নোটিশ লিখুন</span>
-        </button>
-        <button onClick={()=>setView('admin-businesses')} className="bg-white dark:bg-slate-800 border-2 border-emerald-600 text-emerald-600 p-6 md:p-8 rounded-2xl md:rounded-[40px] font-black flex flex-row md:flex-col items-center md:items-start gap-4 text-left active:scale-95 transition-all">
-          <Briefcase size={24} className="md:w-8 md:h-8" />
-          <span className="text-lg md:text-xl">প্রজেক্ট ম্যানেজমেন্ট</span>
-        </button>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderAdminMembers = () => (
-    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-6 sm:space-y-8 animate-in slide-in-from-bottom-4 duration-700">
       <div className={cardClass}>
-        <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>
-            <h2 className={`text-3xl font-black tracking-tight ${textPrimary}`}>সদস্য ব্যবস্থাপনা</h2>
+            <h2 className={`text-2xl sm:text-3xl font-black tracking-tight ${textPrimary}`}>সদস্য ব্যবস্থাপনা</h2>
             <p className={`text-xs md:text-sm ${textSecondary} mt-1`}>সদস্যদের হিসাব বিবরণী, নোটিশ, ইমেইল, হোয়াটসঅ্যাপ ও পার্সোনাল মেসেজ পাঠান</p>
           </div>
-          <button onClick={()=>setShowAddMemberModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-2 shadow-lg transition-all active:scale-95"><UserPlus size={20}/> নতুন সদস্য</button>
+          <button 
+            onClick={()=>setShowAddMemberModal(true)} 
+            className="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3.5 sm:px-8 sm:py-4 rounded-2xl font-black flex items-center gap-2 shadow-lg transition-all active:scale-95 text-xs sm:text-sm md:text-base"
+          >
+            <UserPlus size={18}/> <span>নতুন সদস্য</span>
+          </button>
         </div>
-        <div className="overflow-x-auto">
+
+        {/* DESKTOP & TABLET VIEW: FULL DATA TABLE */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-700">
@@ -1707,13 +2307,113 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
             </tbody>
           </table>
         </div>
+
+        {/* MOBILE VIEW: CLEAN TOUCH-FRIENDLY MEMBER CARDS */}
+        <div className="md:hidden space-y-3.5">
+          {allMembers.filter(m=>m.role!=='admin').map(m => (
+            <div
+              key={m.id}
+              className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/60 space-y-3 transition-all"
+            >
+              {/* Member Top Info */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <img
+                    src={m.avatar}
+                    alt={m.name}
+                    className="w-11 h-11 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0 shadow-xs"
+                  />
+                  <div className="min-w-0">
+                    <div className={`font-black text-sm truncate ${textPrimary}`}>{m.name}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tight bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md">
+                        {m.id}
+                      </span>
+                      {m.phone && (
+                        <span className="text-[11px] text-slate-400 font-mono truncate">
+                          {m.phone}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial Balance Summary Strip */}
+              <div className="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-center">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 block">মোট সঞ্চয়</span>
+                  <span className="text-xs font-black text-emerald-600">
+                    ৳{m.totalSaved.toLocaleString()}
+                  </span>
+                </div>
+                <div className="border-x border-slate-100 dark:border-slate-800">
+                  <span className="text-[10px] font-bold text-slate-400 block">মোট বকেয়া</span>
+                  <span className={`text-xs font-black ${m.totalDue > 0 ? 'text-rose-500' : 'text-slate-400'}`}>
+                    ৳{m.totalDue.toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 block">মাসিক কিস্তি</span>
+                  <span className={`text-xs font-black ${textPrimary}`}>
+                    ৳{m.monthlySavings.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCommunicationMember(m);
+                    setCustomMessageTitle(`আর্থিক হিসাব বিবরণী ও নোটিশ - ${m.name}`);
+                    setCustomMessageBody(`আসসালামু আলাইকুম ${m.name},\n\nআল ইত্তেহাদ ফোরাম থেকে আপনার বর্তমান আর্থিক হিসাব:\n• মোট সঞ্চয় জমা: ৳${m.totalSaved.toLocaleString()}\n• মাসিক সঞ্চয় হার: ৳${m.monthlySavings.toLocaleString()}\n• মোট বকেয়া: ৳${m.totalDue.toLocaleString()}\n• লভ্যাংশ: ৳${m.profitShare.toLocaleString()}\n\nঅনুগ্রহ করে বকেয়া থাকলে দ্রুত পরিশোধ করে ফোরামের কাজে সহায়তা করার জন্য অনুরোধ করা হলো।\n\nধন্যবাদ,\nআল ইত্তেহাদ ফোরাম`);
+                    setCopiedText(false);
+                  }}
+                  className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                >
+                  <Send size={13} />
+                  <span>মেসেজ পাঠান</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAddPaymentModal({ member: m })}
+                  title="পেমেন্ট যোগ"
+                  className="p-2 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 rounded-xl hover:bg-amber-600 hover:text-white transition-all shadow-xs"
+                >
+                  <Coins size={16} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setEditingMember(m)}
+                  title="এডিট"
+                  className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors shadow-xs"
+                >
+                  <Edit size={16} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => deleteMember(m.id)}
+                  title="ডিলিট"
+                  className="p-2 text-rose-500 bg-rose-50 dark:bg-rose-900/30 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-xs"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Member Communication Modal */}
       {communicationMember && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 backdrop-blur-md bg-black/40">
           <div className="absolute inset-0" onClick={()=>setCommunicationMember(null)}></div>
-          <div className={`${isDarkMode?'bg-slate-900':'bg-white'} p-6 md:p-8 rounded-[40px] shadow-2xl w-full max-w-3xl relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 border border-slate-100 dark:border-slate-800`}>
+          <div className={`${isDarkMode?'bg-slate-900':'bg-white'} p-4 sm:p-6 md:p-8 rounded-[28px] sm:rounded-[40px] shadow-2xl w-full max-w-3xl relative max-h-[92vh] overflow-y-auto animate-in zoom-in-95 duration-200 border border-slate-100 dark:border-slate-800`}>
             <div className="flex justify-between items-start mb-6">
               <div className="flex items-center gap-4">
                 <img src={communicationMember.avatar} className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-500 shadow-md" />
@@ -3128,12 +3828,12 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
   return (
     <div className={`min-h-screen ${isDarkMode ? 'dark bg-slate-950 text-slate-50' : 'bg-slate-50 text-slate-900'} flex transition-colors duration-500`}>
       {renderSidebar()}
-      <main className="flex-1 lg:ml-72 min-h-screen pb-24 lg:pb-12">
-        <header className={`sticky top-0 z-40 ${isDarkMode ? 'bg-slate-950/80' : 'bg-white/80'} backdrop-blur-xl border-b px-4 md:px-8 py-4 md:py-6 flex items-center justify-between`}>
-          <div className="flex items-center gap-3 md:gap-5">
-            <button className="lg:hidden p-2 md:p-3 bg-emerald-50 text-emerald-600 rounded-xl md:rounded-2xl active:scale-95 transition-all" onClick={() => setSidebarOpen(true)}><Menu size={20} /></button>
-            <div>
-              <h1 className="text-lg md:text-2xl font-black uppercase tracking-tight">
+      <main className="flex-1 lg:ml-72 min-h-screen pb-24 lg:pb-12 w-full max-w-full overflow-x-hidden">
+        <header className={`sticky top-0 z-40 ${isDarkMode ? 'bg-slate-900/90' : 'bg-white/90'} backdrop-blur-xl border-b px-3.5 sm:px-6 md:px-8 py-3.5 sm:py-5 flex items-center justify-between`}>
+          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+            <button className="lg:hidden p-2 bg-emerald-50 text-emerald-600 rounded-xl active:scale-95 transition-all shrink-0" onClick={() => setSidebarOpen(true)}><Menu size={20} /></button>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl md:text-2xl font-black uppercase tracking-tight truncate">
                 {view === 'dashboard' ? 'ড্যাশবোর্ড' : 
                  view === 'notices' ? 'নোটিশ বোর্ড' : 
                  view === 'voting' || view === 'admin-voting' ? 'ইসলামিক শুরা ও ভোটিং' :
@@ -3144,26 +3844,26 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-2.5 md:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <PWAInstallButton variant="header" />
             <button 
               onClick={() => setIsNoticePanelOpen(!isNoticePanelOpen)} 
-              className={`p-2 md:p-3 rounded-xl md:rounded-2xl relative transition-all ${
+              className={`p-2 sm:p-2.5 rounded-xl relative transition-all ${
                 pushNotification.isGranted
                   ? 'bg-slate-50 dark:bg-slate-900 text-slate-500 hover:text-emerald-600'
                   : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 ring-2 ring-emerald-500/30'
               }`}
               title={pushNotification.isGranted ? 'নোটিফিকেশন (পুশ নোটিফিকেশন সক্রিয়)' : 'নোটিফিকেশন দেখুন / পুশ নোটিফিকেশন চালু করুন'}
             >
-              <Bell size={20} className={!pushNotification.isGranted ? 'animate-pulse' : ''} />
-              {allNotices.length > 0 && <span className="absolute top-2 right-2 md:top-2.5 md:right-2.5 w-2.5 h-2.5 md:w-3 md:h-3 bg-rose-500 rounded-full border-2 border-white dark:border-slate-950 shadow-md"></span>}
-              {pushNotification.isGranted && <span className="absolute bottom-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900"></span>}
+              <Bell size={18} className={!pushNotification.isGranted ? 'animate-pulse' : ''} />
+              {allNotices.length > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-slate-950 shadow-md"></span>}
+              {pushNotification.isGranted && <span className="absolute bottom-1 right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-slate-900"></span>}
             </button>
-            <div className="flex items-center gap-2 md:gap-3 cursor-pointer group" onClick={() => setView('profile-settings')}>
+            <div className="flex items-center gap-2 cursor-pointer group" onClick={() => setView('profile-settings')}>
               <div className="relative">
-                <img src={activeMember?.avatar || currentUser?.avatar} className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl object-cover ring-2 ring-emerald-500/10 group-hover:ring-emerald-500 transition-all" />
-                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 rounded-xl md:rounded-2xl flex items-center justify-center transition-opacity">
-                  <Settings size={14} className="text-white" />
+                <img src={activeMember?.avatar || currentUser?.avatar} className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl object-cover ring-2 ring-emerald-500/10 group-hover:ring-emerald-500 transition-all shrink-0" />
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 rounded-xl flex items-center justify-center transition-opacity">
+                  <Settings size={13} className="text-white" />
                 </div>
               </div>
               <div className="hidden sm:block">
@@ -3174,7 +3874,7 @@ _ধন্যবাদ, আল ইত্তেহাদ ফোরাম_`;
           </div>
         </header>
 
-        <div className="p-4 md:p-12">{renderContent()}</div>
+        <div className="p-3 sm:p-6 md:p-12 w-full max-w-7xl mx-auto">{renderContent()}</div>
         <AdBanner />
 
         {renderNoticePanel()}
